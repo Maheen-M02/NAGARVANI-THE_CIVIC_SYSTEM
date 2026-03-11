@@ -21,8 +21,8 @@
 "start": "react-scripts start",
 "start:https": "HTTPS=true react-scripts start",
 "start:https-win": "set HTTPS=true && react-scripts start",
-"build": "CI=false react-scripts build",
-"build:vercel": "npm run build",
+"build": "CI=false npx react-scripts build",
+"build:vercel": "CI=false npx react-scripts build",
 "test": "react-scripts test",
 "eject": "react-scripts eject"
 },
