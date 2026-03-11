@@ -3,7 +3,7 @@
 "version": "1.0.0",
 "private": true,
 "engines": {
-"node": "24.x"
+"node": "18.x"
 },
 "dependencies": {
 "i18next": "^23.7.0",
@@ -21,7 +21,8 @@
 "start": "react-scripts start",
 "start:https": "HTTPS=true react-scripts start",
 "start:https-win": "set HTTPS=true && react-scripts start",
-"build": "react-scripts build",
+"build": "CI=false react-scripts build",
+"build:vercel": "npm run build",
 "test": "react-scripts test",
 "eject": "react-scripts eject"
 },
