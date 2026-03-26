@@ -1,9 +1,5 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-transformers==4.35.2
-torch
-torchvision
-Pillow==10.1.0
-pillow-avif-plugin==1.4.3
 python-multipart==0.0.6
-numpy
+Pillow==10.1.0
+requests==2.31.0

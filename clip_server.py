@@ -1,271 +1,197 @@
 from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import io
-from PIL import Image
+import os
+import random
 import logging
-import torch
+from PIL import Image
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="NagarVani CLIP Issue Detection API", version="1.0.0")
+app = FastAPI(title="NagarVani Issue Detection API", version="2.0.0")
 
-# Add CORS middleware to allow requests from React/Expo apps
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins including Vercel deployment
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize CLIP pipeline with error handling
+# Try to load CLIP only if explicitly enabled via env var
+# On Render free tier (512MB), CLIP won't fit - use smart fallback
+ENABLE_CLIP = os.environ.get("ENABLE_CLIP", "false").lower() == "true"
 pipe = None
-FORCE_FALLBACK = False  # Set to False when you want to try loading CLIP
 
-if not FORCE_FALLBACK:
+if ENABLE_CLIP:
     try:
-        logger.info("Loading CLIP model...")
-        # Import here to avoid conflicts
+        logger.info("Loading CLIP model (this requires ~2GB RAM)...")
         from transformers import pipeline
         pipe = pipeline("zero-shot-image-classification", model="openai/clip-vit-base-patch32")
         logger.info("CLIP model loaded successfully!")
     except Exception as e:
-        logger.error(f"Failed to load CLIP model: {e}")
-        logger.info("Server will run in fallback mode")
+        logger.error(f"CLIP load failed: {e}")
+        logger.info("Falling back to smart classifier")
 else:
-    logger.info("Running in forced fallback mode (CLIP loading disabled)")
+    logger.info("Running smart fallback classifier (CLIP disabled to save memory)")
 
-# Department mapping for different issue types
-def map_to_category(label):
-    """Map detected issue to category and department"""
-    mapping = {
-        "pothole on road": {
-            "category": "Road Infrastructure", 
-            "department": "PWD Roads"
-        },
-        "garbage pile": {
-            "category": "Waste Management", 
-            "department": "Sanitation Department"
-        },
-        "water leakage": {
-            "category": "Water Supply", 
-            "department": "Water Department"
-        },
-        "broken streetlight": {
-            "category": "Street Lighting", 
-            "department": "Electricity Board"
-        }
-    }
-    
-    return mapping.get(label, {
-        "category": "General Issue", 
-        "department": "Municipal Office"
-    })
+CATEGORY_MAP = {
+    "pothole on road":    {"category": "Road Infrastructure", "department": "Public Works Department"},
+    "garbage pile":       {"category": "Waste Management",   "department": "Waste Management"},
+    "water leakage":      {"category": "Water Supply",       "department": "Water Board"},
+    "broken streetlight": {"category": "Street Lighting",    "department": "Electricity Department"},
+}
 
-def smart_fallback_classification(filename=None):
-    """Provide smarter fallback classification based on filename or other hints"""
-    import random
-    
-    # Base results - order matters for matching priority
-    base_results = {
-        "broken streetlight": {"score": 0.73, "keywords": ["streetlight", "lamp", "bulb", "broken"]},
-        "pothole on road": {"score": 0.82, "keywords": ["pothole", "road", "hole", "crack", "damage"]},
-        "garbage pile": {"score": 0.78, "keywords": ["garbage", "trash", "waste", "dump", "litter"]},
-        "water leakage": {"score": 0.75, "keywords": ["water", "leak", "pipe", "burst", "flood"]}
-    }
-    
-    # Try to match filename if provided
-    selected_issue = None
+ISSUE_KEYWORDS = {
+    "pothole on road":    ["pothole", "road", "hole", "crack", "damage", "asphalt", "pavement"],
+    "garbage pile":       ["garbage", "trash", "waste", "dump", "litter", "rubbish", "dirty"],
+    "water leakage":      ["water", "leak", "pipe", "burst", "flood", "drain", "sewage"],
+    "broken streetlight": ["streetlight", "light", "lamp", "bulb", "broken", "dark", "electric"],
+}
+
+def smart_classify(filename=None, image=None):
+    """
+    Smart classification using:
+    1. Filename keyword matching
+    2. Basic image color analysis (if PIL image provided)
+    3. Weighted random fallback
+    """
+    issues = list(CATEGORY_MAP.keys())
+    scores = {issue: 0.0 for issue in issues}
+
+    # Step 1: Filename keyword matching
     if filename:
-        filename_lower = filename.lower()
-        logger.info(f"Analyzing filename: {filename_lower}")
-        
-        for issue, data in base_results.items():
-            matched_keywords = [kw for kw in data["keywords"] if kw in filename_lower]
-            if matched_keywords:
-                selected_issue = issue
-                logger.info(f"Matched '{issue}' with keywords: {matched_keywords}")
-                break
-    
-    # If no match found, use weighted random (potholes are most common)
-    if not selected_issue:
-        issues = list(base_results.keys())
-        weights = [0.4, 0.3, 0.2, 0.1]  # Pothole, garbage, water, light
-        selected_issue = random.choices(issues, weights=weights)[0]
-    
-    # Build results with the selected issue having highest confidence
-    all_results = []
-    for issue, data in base_results.items():
-        if issue == selected_issue:
-            score = data["score"] + random.uniform(0.05, 0.15)  # Boost selected
-        else:
-            score = data["score"] + random.uniform(-0.15, -0.05)  # Lower others
-        
-        score = max(0.1, min(0.95, score))  # Keep in realistic range
-        all_results.append({"label": issue, "score": score})
-    
-    # Sort by score descending
-    all_results.sort(key=lambda x: x["score"], reverse=True)
-    
-    return all_results
+        fname = filename.lower()
+        for issue, keywords in ISSUE_KEYWORDS.items():
+            matches = sum(1 for kw in keywords if kw in fname)
+            if matches > 0:
+                scores[issue] += matches * 0.3
+                logger.info(f"Filename match: '{issue}' ({matches} keywords)")
+
+    # Step 2: Basic image color analysis
+    if image:
+        try:
+            small = image.resize((50, 50))
+            pixels = list(small.getdata())
+            avg_r = sum(p[0] for p in pixels) / len(pixels)
+            avg_g = sum(p[1] for p in pixels) / len(pixels)
+            avg_b = sum(p[2] for p in pixels) / len(pixels)
+
+            # Dark image → likely streetlight issue
+            brightness = (avg_r + avg_g + avg_b) / 3
+            if brightness < 80:
+                scores["broken streetlight"] += 0.25
+
+            # Very green → garbage/vegetation
+            if avg_g > avg_r + 20 and avg_g > avg_b + 20:
+                scores["garbage pile"] += 0.2
+
+            # Blue tones → water
+            if avg_b > avg_r + 15 and avg_b > avg_g + 10:
+                scores["water leakage"] += 0.2
+
+            # Grey/brown tones → road/pothole
+            grey_diff = max(abs(avg_r - avg_g), abs(avg_g - avg_b), abs(avg_r - avg_b))
+            if grey_diff < 30 and 60 < brightness < 160:
+                scores["pothole on road"] += 0.2
+
+        except Exception as e:
+            logger.warning(f"Image analysis failed: {e}")
+
+    # Step 3: Add base weights + randomness
+    base_weights = {
+        "pothole on road":    0.35,
+        "garbage pile":       0.30,
+        "water leakage":      0.20,
+        "broken streetlight": 0.15,
+    }
+    for issue in issues:
+        scores[issue] += base_weights[issue] + random.uniform(0.0, 0.1)
+
+    # Normalize to 0-1 range
+    total = sum(scores.values())
+    results = [
+        {"label": issue, "score": round(scores[issue] / total, 3)}
+        for issue in issues
+    ]
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return results
+
 
 @app.get("/")
-async def root():
-    """Root endpoint"""
+def root():
     return {
-        "message": "NagarVani CLIP Issue Detection API", 
-        "version": "1.0.0",
+        "message": "NagarVani Issue Detection API",
+        "version": "2.0.0",
         "status": "running",
         "model_loaded": pipe is not None,
-        "mode": "CLIP" if pipe is not None else "Fallback"
+        "mode": "CLIP" if pipe else "SmartFallback"
     }
 
 @app.get("/health")
-async def health_check():
-    """Health check endpoint"""
+def health():
     return {
         "status": "healthy",
         "model_loaded": pipe is not None,
-        "mode": "CLIP" if pipe is not None else "Fallback",
-        "message": "API is running properly"
+        "mode": "CLIP" if pipe else "SmartFallback",
+        "memory_optimized": not ENABLE_CLIP
     }
 
 @app.post("/detect-issue")
 async def detect_issue(file: UploadFile):
-    """
-    Detect civic issues from uploaded images using CLIP model or fallback
-    """
-    # Validate file type
-    if not file.content_type.startswith('image/'):
-        raise HTTPException(
-            status_code=400, 
-            detail="File must be an image"
-        )
-    
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
     try:
-        # Read and process the image
-        logger.info(f"Processing image: {file.filename}")
         image_data = await file.read()
-        
-        # Try to open the image with PIL
+        logger.info(f"Processing: {file.filename} ({len(image_data)} bytes)")
+
+        # Try to open image
+        image = None
         try:
-            image = Image.open(io.BytesIO(image_data))
-        except Exception as pil_error:
-            logger.warning(f"PIL couldn't open image directly: {pil_error}")
-            
-            # Try to handle AVIF and other formats by converting
-            try:
-                # Install pillow-avif-plugin if needed: pip install pillow-avif-plugin
-                import pillow_avif
-                image = Image.open(io.BytesIO(image_data))
-            except ImportError:
-                logger.warning("pillow-avif-plugin not installed, trying alternative method")
-                # Fallback: Use smart classification based on filename
-                logger.info("Using filename-based classification due to image format issue")
-                result = smart_fallback_classification(file.filename)
-                
-                top_prediction = result[0]
-                label = top_prediction["label"]
-                score = top_prediction["score"]
-                category_info = map_to_category(label)
-                
-                return {
-                    "issue": label,
-                    "category": category_info["category"],
-                    "department": category_info["department"],
-                    "confidence": score,
-                    "mode": "Fallback (unsupported image format)",
-                    "all_predictions": result,
-                    "note": "Image format not supported, used intelligent fallback"
-                }
-            except Exception as avif_error:
-                logger.error(f"Failed to process image with AVIF plugin: {avif_error}")
-                # Last resort: filename-based classification
-                result = smart_fallback_classification(file.filename)
-                
-                top_prediction = result[0]
-                label = top_prediction["label"]
-                score = top_prediction["score"]
-                category_info = map_to_category(label)
-                
-                return {
-                    "issue": label,
-                    "category": category_info["category"],
-                    "department": category_info["department"],
-                    "confidence": score,
-                    "mode": "Fallback (image processing error)",
-                    "all_predictions": result,
-                    "note": "Could not process image, used intelligent fallback"
-                }
-        
-        # Convert to RGB if necessary
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-        
-        # Define candidate labels for civic issues
-        candidate_labels = [
-            "pothole on road",
-            "garbage pile", 
-            "water leakage",
-            "broken streetlight"
-        ]
-        
-        # Run CLIP classification or fallback
+            image = Image.open(io.BytesIO(image_data)).convert("RGB")
+        except Exception as e:
+            logger.warning(f"Could not open image: {e}")
+
+        # Run classification
         if pipe is not None:
-            logger.info("Running CLIP classification...")
-            result = pipe(image, candidate_labels=candidate_labels)
+            labels = list(CATEGORY_MAP.keys())
+            result = pipe(image, candidate_labels=labels)
         else:
-            logger.info("Running smart fallback classification...")
-            result = smart_fallback_classification(file.filename)
-        
-        # Get the top prediction
-        top_prediction = result[0]
-        label = top_prediction["label"]
-        score = top_prediction["score"]
-        
-        # Map to category and department
-        category_info = map_to_category(label)
-        
-        logger.info(f"Classification result: {label} ({score:.3f}) - Mode: {'CLIP' if pipe else 'Fallback'}")
-        
+            result = smart_classify(filename=file.filename, image=image)
+
+        top = result[0]
+        info = CATEGORY_MAP.get(top["label"], {"category": "General Issue", "department": "Municipal Corporation"})
+
+        logger.info(f"Result: {top['label']} ({top['score']:.3f}) via {'CLIP' if pipe else 'SmartFallback'}")
+
         return {
-            "issue": label,
-            "category": category_info["category"],
-            "department": category_info["department"],
-            "confidence": score,
-            "mode": "CLIP" if pipe is not None else "Fallback",
+            "issue": top["label"],
+            "category": info["category"],
+            "department": info["department"],
+            "confidence": top["score"],
+            "mode": "CLIP" if pipe else "SmartFallback",
             "all_predictions": result
         }
-        
+
     except Exception as e:
-        logger.error(f"Error processing image: {e}")
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Error processing image: {str(e)}"
-        )
+        logger.error(f"Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/model-info")
-async def model_info():
-    """Get information about the loaded model"""
+def model_info():
     return {
         "model_loaded": pipe is not None,
-        "model_name": "openai/clip-vit-base-patch32" if pipe is not None else "Fallback classifier",
-        "task": "zero-shot-image-classification",
-        "mode": "CLIP" if pipe is not None else "Fallback",
-        "supported_labels": [
-            "pothole on road",
-            "garbage pile", 
-            "water leakage",
-            "broken streetlight"
-        ]
+        "mode": "CLIP" if pipe else "SmartFallback",
+        "supported_labels": list(CATEGORY_MAP.keys()),
+        "note": "SmartFallback uses filename + image color analysis for classification"
     }
+
 
 if __name__ == "__main__":
     import uvicorn
-    import os
     port = int(os.environ.get("PORT", 8000))
-    logger.info(f"Starting NagarVani CLIP API server on port {port}...")
-    logger.info(f"Mode: {'CLIP' if pipe is not None else 'Fallback'}")
+    logger.info(f"Starting on port {port}, mode: {'CLIP' if pipe else 'SmartFallback'}")
     uvicorn.run(app, host="0.0.0.0", port=port)
