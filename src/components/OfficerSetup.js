@@ -59,17 +59,19 @@ export default function OfficerSetup({ onComplete }) {
       bottom: 0,
       background: 'rgba(0, 0, 0, 0.7)',
       display: 'flex',
-      alignItems: 'center',
+      alignItems: window.innerWidth <= 768 ? 'flex-end' : 'center',
       justifyContent: 'center',
       zIndex: 2000
     }}>
       <div style={{
         background: 'white',
-        borderRadius: '16px',
-        padding: '2.5rem',
+        borderRadius: window.innerWidth <= 768 ? '24px 24px 0 0' : '16px',
+        padding: window.innerWidth <= 768 ? '24px 20px' : '2.5rem',
+        paddingBottom: window.innerWidth <= 768 ? 'calc(24px + env(safe-area-inset-bottom))' : '2.5rem',
         width: '100%',
-        maxWidth: '500px',
-        margin: '1rem',
+        maxWidth: window.innerWidth <= 768 ? '100%' : '500px',
+        maxHeight: window.innerWidth <= 768 ? '90vh' : 'auto',
+        overflowY: 'auto',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>

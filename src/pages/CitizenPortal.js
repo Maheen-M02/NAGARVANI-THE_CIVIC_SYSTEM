@@ -490,7 +490,7 @@ export default function CitizenPortal() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: window.innerWidth <= 768 ? '12px' : '2rem', paddingBottom: window.innerWidth <= 768 ? '80px' : '2rem' }}>
         {view === 'home' && (
           <div style={{ animation: 'fadeUp .4s ease' }}>
             {/* Government Services Grid */}

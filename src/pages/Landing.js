@@ -92,9 +92,9 @@ export default function Landing() {
         />
       </div>
 
-      <div style={{ position: 'relative', zIndex: 3, padding: '0 36px' }}>
+      <div style={{ position: 'relative', zIndex: 3, padding: window.innerWidth <= 768 ? '0 16px' : '0 36px' }}>
         {/* Header */}
-        <div style={{ paddingTop: 32, paddingBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ paddingTop: 24, paddingBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <NagarVaniLogo size={40} />
             <div style={{ background: 'linear-gradient(135deg,#1A3A8F,#0A7EA4)', color: '#fff', padding: '7px 16px', borderRadius: 10, fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 20 }}>
@@ -186,7 +186,7 @@ export default function Landing() {
         </div>
 
         {/* Role cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 22, maxWidth: 1060, margin: '0 auto', paddingBottom: 48 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : 'repeat(auto-fit,minmax(280px,1fr))', gap: window.innerWidth <= 768 ? 14 : 22, maxWidth: 1060, margin: '0 auto', paddingBottom: 48 }}>
           {roles.map((r, i) => (
             <div
               key={r.id}

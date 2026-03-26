@@ -119,11 +119,11 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div style={{ padding: '22px 28px' }}>
+      <div style={{ padding: window.innerWidth <= 768 ? '12px' : '22px 28px', paddingBottom: window.innerWidth <= 768 ? '80px' : undefined }}>
         {/* Tab bar */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: '#fff', padding: 4, borderRadius: 10, width: 'fit-content', border: '1px solid #E2E8F0' }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#fff', padding: 4, borderRadius: 10, width: window.innerWidth <= 768 ? '100%' : 'fit-content', border: '1px solid #E2E8F0', overflowX: 'auto' }}>
           {tabs.map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{ padding: '7px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 700, fontSize: 12, background: tab === t ? '#0D1B40' : 'transparent', color: tab === t ? '#fff' : '#64748B', transition: 'all .2s', textTransform: 'capitalize' }}>
+            <button key={t} onClick={() => setTab(t)} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 700, fontSize: 12, background: tab === t ? '#0D1B40' : 'transparent', color: tab === t ? '#fff' : '#64748B', transition: 'all .2s', textTransform: 'capitalize', flexShrink: 0 }}>
               {tabIcons[t]} {t}
             </button>
           ))}
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
             </div>
             <div className="card" style={{ padding: '22px', background: 'linear-gradient(135deg,#0D1B40,#1A3A8F)', marginBottom: 22 }}>
               <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 15, color: '#fff', marginBottom: 16 }}>🤖 AI Engine Live Stats</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 768 ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: 16 }}>
                 {[['98.2%', 'Auto-Triaged'], ['1.8 sec', 'Avg Triage Time'], ['94.6%', 'Routing Accuracy'], ['23', 'Duplicates Merged'], ['14', 'Languages Today'], ['18', 'SLA Breaches Prevented']].map(([v, l]) => (
                   <div key={l} style={{ padding: '14px', background: '#ffffff0c', borderRadius: 10, textAlign: 'center' }}>
                     <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 22, color: '#00C2E0' }}>{v}</div>
@@ -462,8 +462,8 @@ export default function AdminDashboard() {
 
       {/* Complaint Tracking Modal */}
       {showComplaintModal && selectedComplaint && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }} onClick={() => setShowComplaintModal(false)}>
-          <div style={{ background: 'white', borderRadius: 16, maxWidth: 700, width: '100%', maxHeight: '90vh', overflow: 'auto', padding: '2rem', position: 'relative' }} onClick={e => e.stopPropagation()}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: window.innerWidth <= 768 ? 'flex-end' : 'center', justifyContent: 'center', zIndex: 1000, padding: window.innerWidth <= 768 ? 0 : '2rem' }} onClick={() => setShowComplaintModal(false)}>
+          <div style={{ background: 'white', borderRadius: window.innerWidth <= 768 ? '20px 20px 0 0' : 16, maxWidth: 700, width: '100%', maxHeight: window.innerWidth <= 768 ? '92vh' : '90vh', overflow: 'auto', padding: window.innerWidth <= 768 ? '20px 16px' : '2rem', position: 'relative', paddingBottom: window.innerWidth <= 768 ? 'calc(20px + env(safe-area-inset-bottom))' : '2rem' }} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowComplaintModal(false)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#64748B' }}>×</button>
             
             <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 20, color: '#1E2845', marginBottom: 16 }}>

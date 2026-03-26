@@ -350,7 +350,7 @@ export default function OfficerDashboard() {
       <TopNav title="Officer Dashboard" sub={`${user?.name || 'Officer'} — ${dept?.name || 'Department'}`} role="officer" />
 
       {/* View toggle bar */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', flexWrap: 'nowrap' }}>
         <button onClick={() => setActiveView('queue')} style={{ padding: '7px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 700, fontSize: 12, background: activeView === 'queue' ? '#0D1B40' : 'transparent', color: activeView === 'queue' ? '#fff' : '#64748B', transition: 'all .2s' }}>
           📋 Task Queue
         </button>
@@ -376,9 +376,9 @@ export default function OfficerDashboard() {
 
       {/* Queue view */}
       {activeView === 'queue' && (
-        <div style={{ display: 'flex', height: 'calc(100vh - 112px)' }}>
+        <div style={{ display: 'flex', flexDirection: window.innerWidth <= 768 ? 'column' : 'row', height: window.innerWidth <= 768 ? 'auto' : 'calc(100vh - 112px)' }}>
           {/* Left panel */}
-          <div style={{ width: 400, borderRight: '1px solid #E2E8F0', background: '#fff', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+          <div style={{ width: window.innerWidth <= 768 ? '100%' : 400, borderRight: window.innerWidth <= 768 ? 'none' : '1px solid #E2E8F0', borderBottom: window.innerWidth <= 768 ? '1px solid #E2E8F0' : 'none', background: '#fff', display: 'flex', flexDirection: 'column', flexShrink: 0, maxHeight: window.innerWidth <= 768 ? '45vh' : 'none' }}>
             <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid #F1F5F9', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
               {['all', 'Open', 'In Progress', 'Escalated', 'Resolved'].map(s => {
                 const c = STATUS_COLORS[s] || '#0A7EA4';

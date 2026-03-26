@@ -59,53 +59,59 @@ export function StatCard({ label, value, icon, color, sub, trend }) {
 export function TopNav({ title, sub, role }) {
   const { setRole, complaints, signOut, user } = useApp();
   const { t } = useTranslation();
+  const isMobile = window.innerWidth <= 768;
   const roleColors = { citizen: '#0A7EA4', officer: '#8B5CF6', admin: '#0D1B40' };
   const open = complaints.filter(c => ['Open', 'Escalated'].includes(c.status)).length;
   
   const handleSignOut = async () => {
     await signOut();
-    // Redirect to landing page after sign out
     window.location.href = '/';
   };
   
   return (
     <nav style={{
-      background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '0 28px',
-      height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      background: '#fff', borderBottom: '1px solid #E2E8F0',
+      padding: isMobile ? '0 12px' : '0 28px',
+      height: isMobile ? 52 : 60,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 8px rgba(13,27,64,.06)',
     }}>
-      <div className="nav-left" style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0 }}>
-        <div className="brand-logo" style={{ background: 'linear-gradient(135deg,#0D1B40,#1A3A8F)', color: '#fff', padding: '5px 14px', borderRadius: 8, fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 17, flexShrink: 0 }}>
+      <div className="nav-left" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 14, flex: 1, minWidth: 0 }}>
+        <div className="brand-logo" style={{ background: 'linear-gradient(135deg,#0D1B40,#1A3A8F)', color: '#fff', padding: isMobile ? '4px 10px' : '5px 14px', borderRadius: 8, fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: isMobile ? 14 : 17, flexShrink: 0 }}>
           Nagar<span style={{ color: '#00C2E0' }}>Vani</span>
         </div>
-        <div style={{ height: 20, width: 1, background: '#E2E8F0', flexShrink: 0 }} />
-        <div style={{ minWidth: 0, overflow: 'hidden' }}>
-          <div className="nav-title" style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 14, color: '#1E2845', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
-          {sub && <div className="nav-subtitle" style={{ fontSize: 11, color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
-        </div>
+        {!isMobile && <div style={{ height: 20, width: 1, background: '#E2E8F0', flexShrink: 0 }} />}
+        {!isMobile && (
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
+            <div className="nav-title" style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 14, color: '#1E2845', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
+            {sub && <div className="nav-subtitle" style={{ fontSize: 11, color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
+          </div>
+        )}
       </div>
-      <div className="nav-right" style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-        <LanguageSelector />
+      <div className="nav-right" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 10, flexShrink: 0 }}>
+        {!isMobile && <LanguageSelector />}
         {role === 'citizen' && <NotificationBell />}
-        {role === 'admin' && (
+        {!isMobile && role === 'admin' && (
           <div className="nav-badge" style={{ background: '#EF444420', color: '#EF4444', padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
             <span style={{ width: 6, height: 6, background: '#EF4444', borderRadius: '50%', display: 'inline-block' }} />
             {open} Active
           </div>
         )}
-        {user && (
+        {!isMobile && user && (
           <div style={{ fontSize: 11, color: '#64748B', whiteSpace: 'nowrap' }}>
             {user.name || user.email}
           </div>
         )}
-        <div className="nav-badge" style={{ background: (roleColors[role] || '#0A7EA4') + '15', color: roleColors[role] || '#0A7EA4', padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
-          {role === 'citizen' ? '🧑‍💼' : role === 'officer' ? '👮' : '📊'} {role?.charAt(0).toUpperCase() + role?.slice(1)}
-        </div>
+        {!isMobile && (
+          <div className="nav-badge" style={{ background: (roleColors[role] || '#0A7EA4') + '15', color: roleColors[role] || '#0A7EA4', padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
+            {role === 'citizen' ? '🧑‍💼' : role === 'officer' ? '👮' : '📊'} {role?.charAt(0).toUpperCase() + role?.slice(1)}
+          </div>
+        )}
         <button
           onClick={handleSignOut}
-          style={{ background: 'none', border: '1.5px solid #dc2626', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#dc2626', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}
+          style={{ background: 'none', border: '1.5px solid #dc2626', borderRadius: 8, padding: isMobile ? '4px 8px' : '5px 12px', fontSize: isMobile ? 11 : 12, fontWeight: 600, cursor: 'pointer', color: '#dc2626', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}
         >
-          🚪 <span>Sign Out</span>
+          🚪{!isMobile && ' Sign Out'}
         </button>
       </div>
     </nav>

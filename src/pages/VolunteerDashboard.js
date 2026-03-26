@@ -285,7 +285,7 @@ const VolunteerDashboard = () => {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: window.innerWidth <= 768 ? '12px' : '2rem', paddingBottom: window.innerWidth <= 768 ? '80px' : '2rem' }}>
         {activeTab === 'available' && (
           <div>
             {availableTasks.length === 0 ? (
@@ -299,7 +299,7 @@ const VolunteerDashboard = () => {
                 </p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : 'repeat(auto-fill, minmax(350px, 1fr))', gap: window.innerWidth <= 768 ? '1rem' : '1.5rem' }}>
                 {availableTasks.map(task => (
                   <TaskCard
                     key={task.id}
@@ -326,7 +326,7 @@ const VolunteerDashboard = () => {
                 </p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : 'repeat(auto-fill, minmax(350px, 1fr))', gap: window.innerWidth <= 768 ? '1rem' : '1.5rem' }}>
                 {myTasks.map(task => (
                   <TaskCard
                     key={task.id}

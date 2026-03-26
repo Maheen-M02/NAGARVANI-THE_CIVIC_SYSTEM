@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import MobileBottomNav from './components/MobileBottomNav';
 import Landing from './pages/Landing';
 import CitizenPortal from './pages/CitizenPortal';
 import OfficerDashboard from './pages/OfficerDashboard';
@@ -10,6 +11,7 @@ import Leaderboard from './pages/Leaderboard';
 import VolunteerDashboard from './pages/VolunteerDashboard';
 import Toast from './components/Toast';
 import './styles/global.css';
+import './styles/mobile.css';
 import './i18n'; // Initialize i18n
 
 function AppRoutes() {
@@ -131,6 +133,7 @@ export default function App() {
       <AppProvider>
         <Toast />
         <AppRoutes />
+        <MobileBottomNav />
       </AppProvider>
     </Router>
   );
