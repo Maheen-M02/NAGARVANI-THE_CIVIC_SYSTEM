@@ -8,6 +8,7 @@ export const SEED_COMPLAINTS = [
     description: 'Massive pothole near Metro Station Gate 3. Three bikes fallen. Very dangerous.',
     category: 'Road Damage', dept: 'pwd', priority: 'High', status: 'In Progress', officer: 'o1',
     citizenName: 'Arjun Mehta', phone: '98765XXXXX', location: 'MG Road, Bengaluru', ward: 'Ward 42',
+    citizenId: 'citizen_001', // Added citizen ID
     createdAt: now - 8 * H, updatedAt: now - 2 * H, slaHours: 24, confidence: 94,
     lat: 12.9716, lng: 77.5946,
     updates: [
@@ -21,6 +22,7 @@ export const SEED_COMPLAINTS = [
     description: 'Entire Sector 14 without water for 3 days. Elderly and children severely affected.',
     category: 'Water Supply', dept: 'water', priority: 'Critical', status: 'Escalated', officer: 'o2',
     citizenName: 'Sunita Devi', phone: '87654XXXXX', location: 'Sector 14, Gurugram', ward: 'Ward 19',
+    citizenId: 'citizen_002', // Added citizen ID
     createdAt: now - 72 * H, updatedAt: now - 1 * H, slaHours: 4, confidence: 97,
     lat: 28.4595, lng: 77.0266,
     updates: [
@@ -35,6 +37,7 @@ export const SEED_COMPLAINTS = [
     description: 'All 12 street lights on Kumar Street off for a week. Safety concern at night.',
     category: 'Power Outage', dept: 'elec', priority: 'Medium', status: 'Open', officer: 'o3',
     citizenName: 'Mohammed Iqbal', phone: '76543XXXXX', location: 'Kumar Street, Chennai', ward: 'Ward 67',
+    citizenId: 'citizen_003', // Added citizen ID
     createdAt: now - 3 * H, updatedAt: now - 3 * H, slaHours: 72, confidence: 89,
     lat: 13.0827, lng: 80.2707,
     updates: [
@@ -47,6 +50,7 @@ export const SEED_COMPLAINTS = [
     description: 'Waste piling up. Smell unbearable and stray animals creating hazard.',
     category: 'Garbage & Sanitation', dept: 'sanit', priority: 'Medium', status: 'Resolved', officer: 'o4',
     citizenName: 'Lakshmi Krishnan', phone: '65432XXXXX', location: 'Anna Nagar, Chennai', ward: 'Ward 89',
+    citizenId: 'citizen_004', // Added citizen ID
     createdAt: now - 48 * H, updatedAt: now - 4 * H, slaHours: 72, confidence: 91,
     lat: 13.0878, lng: 80.2185,
     updates: [
@@ -60,6 +64,7 @@ export const SEED_COMPLAINTS = [
     description: 'District hospital OPD overcrowded. Doctors overwhelmed, patients being turned away.',
     category: 'Health & Hospitals', dept: 'health', priority: 'Critical', status: 'In Progress', officer: 'o5',
     citizenName: 'Ravi Shankar', phone: '54321XXXXX', location: 'District Hospital, Patna', ward: 'Ward 3',
+    citizenId: 'citizen_005', // Added citizen ID
     createdAt: now - 5 * H, updatedAt: now - 1 * H, slaHours: 4, confidence: 96,
     lat: 25.5941, lng: 85.1376,
     updates: [
@@ -73,6 +78,7 @@ export const SEED_COMPLAINTS = [
     description: 'Neighbor extended construction onto public road. Vehicles cannot pass.',
     category: 'Public Safety', dept: 'police', priority: 'High', status: 'Open', officer: 'o6',
     citizenName: 'Geeta Verma', phone: '43210XXXXX', location: 'Lajpat Nagar, Delhi', ward: 'Ward 22',
+    citizenId: 'citizen_006', // Added citizen ID
     createdAt: now - 1 * H, updatedAt: now - 1 * H, slaHours: 24, confidence: 88,
     lat: 28.5665, lng: 77.2431,
     updates: [
@@ -85,6 +91,7 @@ export const SEED_COMPLAINTS = [
     description: 'Main sewage line burst near Park Avenue. Raw sewage flowing into homes.',
     category: 'Water Supply', dept: 'water', priority: 'Critical', status: 'In Progress', officer: 'o2',
     citizenName: 'Deepak Joshi', phone: '91234XXXXX', location: 'Park Avenue, Mumbai', ward: 'Ward 11',
+    citizenId: 'citizen_007', // Added citizen ID
     createdAt: now - 4 * H, updatedAt: now - 30 * 60 * 1000, slaHours: 4, confidence: 98,
     lat: 19.0760, lng: 72.8777,
     updates: [
@@ -98,6 +105,7 @@ export const SEED_COMPLAINTS = [
     description: 'Road near old bridge collapsed after heavy rain. Traffic diverted.',
     category: 'Road Damage', dept: 'pwd', priority: 'Critical', status: 'In Progress', officer: 'o1',
     citizenName: 'Ananya Roy', phone: '80123XXXXX', location: 'Bridge Road, Kolkata', ward: 'Ward 5',
+    citizenId: 'citizen_008', // Added citizen ID
     createdAt: now - 6 * H, updatedAt: now - 2 * H, slaHours: 4, confidence: 96,
     lat: 22.5726, lng: 88.3639,
     updates: [
@@ -111,6 +119,7 @@ export const SEED_COMPLAINTS = [
     description: 'Transformer exploded at Junction 5. 200+ homes without power since yesterday.',
     category: 'Power Outage', dept: 'elec', priority: 'Critical', status: 'Escalated', officer: 'o3',
     citizenName: 'Pradeep Nair', phone: '70987XXXXX', location: 'Junction 5, Hyderabad', ward: 'Ward 33',
+    citizenId: 'citizen_009', // Added citizen ID
     createdAt: now - 18 * H, updatedAt: now - 3 * H, slaHours: 4, confidence: 99,
     lat: 17.3850, lng: 78.4867,
     updates: [
@@ -124,6 +133,7 @@ export const SEED_COMPLAINTS = [
     description: 'Multiple illegal food stalls taken over public park. Children have no space.',
     category: 'Public Safety', dept: 'police', priority: 'Medium', status: 'Open', officer: 'o6',
     citizenName: 'Meena Gupta', phone: '60876XXXXX', location: 'Central Park, Jaipur', ward: 'Ward 17',
+    citizenId: 'citizen_010', // Added citizen ID
     createdAt: now - 2 * H, updatedAt: now - 2 * H, slaHours: 72, confidence: 85,
     lat: 26.9124, lng: 75.7873,
     updates: [
@@ -136,6 +146,7 @@ export const SEED_COMPLAINTS = [
     description: 'Over 20 aggressive stray dogs near government school. Child bitten last week.',
     category: 'Public Safety', dept: 'police', priority: 'High', status: 'In Progress', officer: 'o6',
     citizenName: 'Sanjay Kumar', phone: '50765XXXXX', location: 'Govt School Road, Pune', ward: 'Ward 28',
+    citizenId: 'citizen_001', // Same citizen as NV-001 (Arjun Mehta using different name)
     createdAt: now - 10 * H, updatedAt: now - 4 * H, slaHours: 24, confidence: 87,
     lat: 18.5204, lng: 73.8567,
     updates: [
@@ -149,6 +160,7 @@ export const SEED_COMPLAINTS = [
     description: 'Stagnant water in open drains causing mosquito breeding. Dengue fear in area.',
     category: 'Garbage & Sanitation', dept: 'sanit', priority: 'High', status: 'Open', officer: 'o4',
     citizenName: 'Fatima Shaikh', phone: '40654XXXXX', location: 'Old City Area, Ahmedabad', ward: 'Ward 41',
+    citizenId: 'citizen_002', // Same citizen as NV-002 (Sunita Devi using different name)
     createdAt: now - 7 * H, updatedAt: now - 7 * H, slaHours: 24, confidence: 92,
     lat: 23.0225, lng: 72.5714,
     updates: [

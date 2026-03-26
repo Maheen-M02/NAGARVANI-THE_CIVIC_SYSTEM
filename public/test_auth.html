@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Supabase Auth Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 250px;
+        }
+        #result {
+            background: white;
+            padding: 15px;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Supabase Authentication Test</h1>
+    
+    <div id="status" class="test-section">
+        <h2>Connection Status</h2>
+        <div id="connectionStatus">Testing connection...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>1. Create Test User Manually</h2>
+        <p>Go to your Supabase Dashboard and create a user:</p>
+        <ol>
+            <li>Visit: <a href="https://supabase.com/dashboard/project/xbukealfzhidcypohdwp/auth/users" target="_blank">Supabase Users</a></li>
+            <li>Click "Add User" → "Create new user"</li>
+            <li>Email: <code>test@example.com</code></li>
+            <li>Password: <code>test123456</code></li>
+            <li>✅ Check "Auto Confirm User"</li>
+            <li>Click "Create user"</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Test Sign In</h2>
+        <div>
+            <input type="email" id="email" placeholder="Email" value="test@example.com">
+            <input type="password" id="password" placeholder="Password" value="test123456">
+            <button onclick="testSignIn()">Sign In</button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Test Sign Up</h2>
+        <div>
+            <input type="email" id="signupEmail" placeholder="Email" value="newuser@example.com">
+            <input type="password" id="signupPassword" placeholder="Password" value="password123">
+            <button onclick="testSignUp()">Sign Up</button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Check Current Session</h2>
+        <button onclick="checkSession()">Check Session</button>
+        <button onclick="signOut()">Sign Out</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Results</h2>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://xbukealfzhidcypohdwp.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhidWtlYWxmemhpZGN5cG9oZHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNDk4NDgsImV4cCI6MjA4OTgyNTg0OH0.Dp4CtfokPATur1PJmQmOz0Ix7a1EOqoE1LSzrp6M6qQ';
+
+        let client;
+
+        function log(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            resultDiv.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            console.log(message);
+        }
+
+        async function initSupabase() {
+            try {
+                if (typeof window.supabase === 'undefined') {
+                    log('❌ Supabase library not loaded!', 'error');
+                    document.getElementById('connectionStatus').innerHTML = 
+                        '<span class="error">❌ Supabase library failed to load. Check your internet connection.</span>';
+                    return false;
+                }
+
+                client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                log('✅ Supabase client created', 'success');
+
+                // Test connection
+                const { data, error } = await client.auth.getSession();
+                if (error) {
+                    log('❌ Connection error: ' + error.message, 'error');
+                    document.getElementById('connectionStatus').innerHTML = 
+                        '<span class="error">❌ Connection failed: ' + error.message + '</span>';
+                    return false;
+                }
+
+                log('✅ Connected to Supabase successfully!', 'success');
+                document.getElementById('connectionStatus').innerHTML = 
+                    '<span class="success">✅ Connected to Supabase</span>';
+                
+                if (data.session) {
+                    log('ℹ️ Existing session found for: ' + data.session.user.email, 'info');
+                }
+
+                return true;
+            } catch (err) {
+                log('❌ Exception: ' + err.message, 'error');
+                document.getElementById('connectionStatus').innerHTML = 
+                    '<span class="error">❌ Exception: ' + err.message + '</span>';
+                return false;
+            }
+        }
+
+        async function testSignIn() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            log('\n=== TESTING SIGN IN ===');
+            log('Email: ' + email);
+
+            try {
+                const { data, error } = await client.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) {
+                    log('❌ Sign In Error: ' + error.message, 'error');
+                    
+                    if (error.message.includes('Invalid login credentials')) {
+                        log('💡 TIP: User might not exist. Create user manually in Supabase Dashboard.', 'info');
+                    } else if (error.message.includes('Email not confirmed')) {
+                        log('💡 TIP: Disable email confirmation in Supabase settings or confirm the email.', 'info');
+                    }
+                } else {
+                    log('✅ Sign In Success!', 'success');
+                    log('User ID: ' + data.user.id, 'success');
+                    log('Email: ' + data.user.email, 'success');
+                    log('Role: ' + (data.user.user_metadata?.role || 'citizen'), 'success');
+                }
+            } catch (err) {
+                log('❌ Exception: ' + err.message, 'error');
+            }
+        }
+
+        async function testSignUp() {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+
+            log('\n=== TESTING SIGN UP ===');
+            log('Email: ' + email);
+
+            try {
+                const { data, error } = await client.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            name: 'Test User',
+                            role: 'citizen'
+                        }
+                    }
+                });
+
+                if (error) {
+                    log('❌ Sign Up Error: ' + error.message, 'error');
+                    
+                    if (error.message.includes('rate limit')) {
+                        log('💡 TIP: Rate limit exceeded. Create user manually in Supabase Dashboard.', 'info');
+                    } else if (error.message.includes('already registered')) {
+                        log('💡 TIP: User already exists. Try signing in instead.', 'info');
+                    }
+                } else {
+                    log('✅ Sign Up Success!', 'success');
+                    if (data.user) {
+                        log('User ID: ' + data.user.id, 'success');
+                        log('Email: ' + data.user.email, 'success');
+                        
+                        if (data.user.identities && data.user.identities.length === 0) {
+                            log('⚠️ Email confirmation required. Check your email inbox.', 'info');
+                        }
+                    }
+                }
+            } catch (err) {
+                log('❌ Exception: ' + err.message, 'error');
+            }
+        }
+
+        async function checkSession() {
+            log('\n=== CHECKING SESSION ===');
+
+            try {
+                const { data: { session }, error } = await client.auth.getSession();
+
+                if (error) {
+                    log('❌ Session Error: ' + error.message, 'error');
+                } else if (session) {
+                    log('✅ Active Session Found!', 'success');
+                    log('User: ' + session.user.email, 'success');
+                    log('Role: ' + (session.user.user_metadata?.role || 'citizen'), 'success');
+                    log('Expires: ' + new Date(session.expires_at * 1000).toLocaleString(), 'info');
+                } else {
+                    log('ℹ️ No active session', 'info');
+                }
+            } catch (err) {
+                log('❌ Exception: ' + err.message, 'error');
+            }
+        }
+
+        async function signOut() {
+            log('\n=== SIGNING OUT ===');
+
+            try {
+                const { error } = await client.auth.signOut();
+
+                if (error) {
+                    log('❌ Sign Out Error: ' + error.message, 'error');
+                } else {
+                    log('✅ Signed out successfully!', 'success');
+                }
+            } catch (err) {
+                log('❌ Exception: ' + err.message, 'error');
+            }
+        }
+
+        // Initialize on page load
+        window.onload = async () => {
+            log('=== INITIALIZING ===');
+            await initSupabase();
+        };
+    </script>
+</body>
+</html>

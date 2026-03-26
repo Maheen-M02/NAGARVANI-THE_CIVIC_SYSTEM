@@ -1,77 +1,179 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { aiTriage, aiImageClassification } from '../data/aiTriage';
-import { TopNav, StatusBadge, PrioBadge, Spinner, timeAgo } from '../components/UI';
-import { DEPARTMENTS, OFFICERS, SAMPLE_COMPLAINTS } from '../data/constants';
-import { useTranslation } from 'react-i18next';
+import { StatusBadge, PrioBadge, Spinner, timeAgo } from '../components/UI';
+import { DEPARTMENTS, OFFICERS } from '../data/constants';
+import NagarVaniLogo from '../components/NagarVaniLogo';
+import locationService from '../services/locationService';
+import AuditTrail from '../components/AuditTrail';
+import '../styles/leaderboard.css';
+import '../styles/government-portal.css';
+
+// Lazy load the Leaderboard component
+const { lazy, Suspense } = React;
+const Leaderboard = lazy(() => import('./Leaderboard'));
+
+const LazyLeaderboard = () => (
+  <Suspense fallback={
+    <div style={{ 
+      padding: '20px', 
+      textAlign: 'center',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      minHeight: '100vh',
+      color: 'white'
+    }}>
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: '16px',
+        padding: '40px',
+        marginTop: '50px'
+      }}>
+        <Spinner size={40} color="white" />
+        <h1 style={{ marginTop: '16px' }}>🏆 Loading Leaderboard...</h1>
+      </div>
+    </div>
+  }>
+    <Leaderboard />
+  </Suspense>
+);
 
 function TrackView({ c }) {
-  const dept = DEPARTMENTS.find(x => x.id === c.dept);
-  const officer = OFFICERS.find(x => x.id === c.officer);
-  const elapsed = (Date.now() - c.createdAt) / 3600000;
-  const slaPct = Math.min(100, (elapsed / c.slaHours) * 100);
-  const slaColor = slaPct > 90 ? '#EF4444' : slaPct > 70 ? '#F97316' : '#22C55E';
+  // Handle both snake_case (database) and camelCase (local) formats
+  const ticketId = c.ticket_id || c.ticketId || 'Unknown';
+  const createdAt = c.created_at ? new Date(c.created_at).getTime() : (c.createdAt || Date.now());
+  const slaHours = c.sla_hours || c.slaHours || 72;
+  const departmentId = c.department_id || c.dept;
+  const officerId = c.assigned_officer_id || c.officer;
+  
+  const dept = c.departments || DEPARTMENTS.find(x => x.id === departmentId);
+  const officer = OFFICERS.find(x => x.id === officerId);
+  const elapsed = (Date.now() - createdAt) / 3600000;
+  const slaPct = Math.min(100, (elapsed / slaHours) * 100);
+  const slaColor = slaPct > 90 ? '#dc2626' : slaPct > 70 ? '#f59e0b' : '#059669';
   const slaLabel = slaPct > 100 ? 'BREACHED' : slaPct > 90 ? 'AT RISK' : 'ON TRACK';
 
   return (
     <div style={{ animation: 'fadeUp .3s ease' }}>
-      <div className="card" style={{ padding: '22px', marginBottom: 18, borderTop: `4px solid ${dept?.color}` }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-          <div>
-            <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 18, color: '#1E2845', marginBottom: 4 }}>{c.title}</h2>
-            <div style={{ fontSize: 12, color: '#64748B' }}>🎫 {c.ticketId} • Filed {timeAgo(c.createdAt)}</div>
-          </div>
-          <StatusBadge s={c.status} />
+      <div className="gov-card" style={{ marginBottom: '1.5rem' }}>
+        <div className="gov-card-header">
+          <h3 className="gov-card-title">
+            <div className="gov-card-icon">🎫</div>
+            Complaint Details - {ticketId}
+          </h3>
         </div>
-        <div className="grid-3" style={{ marginBottom: 16 }}>
-          {[
-            ['PRIORITY', <PrioBadge p={c.priority} />],
-            ['DEPT', <span style={{ fontWeight: 700, color: dept?.color, fontSize: 13 }}>{dept?.icon} {dept?.name}</span>],
-            ['AI CONFIDENCE', <span style={{ fontWeight: 800, color: '#22C55E', fontSize: 14 }}>🤖 {c.confidence}%</span>],
-          ].map(([l, v]) => (
-            <div key={l} style={{ padding: '12px', background: '#F8FAFC', borderRadius: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#64748B', marginBottom: 6 }}>{l}</div>
-              {v}
+        <div className="gov-card-body">
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h4 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--gov-dark)', marginBottom: '0.5rem' }}>
+              {c.title}
+            </h4>
+            <div style={{ fontSize: '0.875rem', color: 'var(--gov-text-light)', marginBottom: '1rem' }}>
+              Filed {timeAgo(createdAt)} • Ticket ID: {ticketId}
             </div>
-          ))}
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 5 }}>
-            <span>SLA Progress</span>
-            <span style={{ color: slaColor }}>{Math.round(elapsed)}h / {c.slaHours}h — <b>{slaLabel}</b></span>
+            <p style={{ fontSize: '0.9375rem', color: 'var(--gov-text)', lineHeight: '1.6', marginBottom: '1rem' }}>
+              {c.description}
+            </p>
           </div>
-          <div style={{ height: 7, background: '#E2E8F0', borderRadius: 999 }}>
-            <div style={{ height: '100%', width: slaPct + '%', background: slaColor, borderRadius: 999, transition: 'width .5s' }} />
+
+          {/* Evidence Photos */}
+          {(() => {
+            const photos = c.photo_urls || c.photoUrls || (c.imageUrl ? [c.imageUrl] : []);
+            if (!photos || photos.length === 0) return null;
+            return (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: '700', color: 'var(--gov-text-light)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  📷 EVIDENCE PHOTOS ({photos.length})
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: photos.length === 1 ? '1fr' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
+                  {photos.map((url, i) => (
+                    <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={url}
+                        alt={`Evidence ${i + 1}`}
+                        style={{ width: '100%', height: photos.length === 1 ? 280 : 140, objectFit: 'cover', borderRadius: 8, border: '2px solid #E2E8F0', cursor: 'pointer' }}
+                        onError={e => e.target.parentElement.style.display = 'none'}
+                      />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="gov-stats-grid" style={{ marginBottom: '1.5rem' }}>
+            <div className="gov-stat-card">
+              <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--gov-text-light)', marginBottom: '0.5rem' }}>
+                PRIORITY
+              </div>
+              <PrioBadge p={c.priority} />
+            </div>
+            <div className="gov-stat-card">
+              <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--gov-text-light)', marginBottom: '0.5rem' }}>
+                DEPARTMENT
+              </div>
+              <div style={{ fontWeight: '700', color: dept?.color, fontSize: '0.875rem' }}>
+                {dept?.icon} {dept?.name}
+              </div>
+            </div>
+            <div className="gov-stat-card">
+              <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--gov-text-light)', marginBottom: '0.5rem' }}>
+                STATUS
+              </div>
+              <StatusBadge s={c.status} />
+            </div>
           </div>
-        </div>
-        {officer && (
-          <div style={{ padding: '12px 14px', background: '#0A7EA408', border: '1px solid #0A7EA420', borderRadius: 10 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#64748B', marginBottom: 7 }}>ASSIGNED OFFICER</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 34, height: 34, background: '#0A7EA4', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 12 }}>{officer.avatar}</div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', fontWeight: '600', color: 'var(--gov-text-light)', marginBottom: '0.5rem' }}>
+              <span>SLA Progress</span>
+              <span style={{ color: slaColor }}>
+                {Math.round(elapsed)}h / {slaHours}h — <strong>{slaLabel}</strong>
+              </span>
+            </div>
+            <div style={{ height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ 
+                height: '100%', 
+                width: slaPct + '%', 
+                background: `linear-gradient(90deg, ${slaColor}, ${slaColor}dd)`, 
+                transition: 'width .5s ease',
+                borderRadius: '4px'
+              }} />
+            </div>
+          </div>
+
+          {officer && (
+            <div className="gov-alert gov-alert-info">
               <div>
-                <div style={{ fontWeight: 700, color: '#1E2845', fontSize: 13 }}>{officer.name}</div>
-                <div style={{ fontSize: 11, color: '#64748B' }}>⭐ {officer.rating}</div>
+                <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--gov-text-light)', marginBottom: '0.5rem' }}>
+                  ASSIGNED OFFICER
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ 
+                    width: '40px', 
+                    height: '40px', 
+                    background: 'linear-gradient(135deg, var(--gov-primary), var(--gov-secondary))', 
+                    borderRadius: '8px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    color: 'white', 
+                    fontWeight: '800', 
+                    fontSize: '1rem' 
+                  }}>
+                    {officer.avatar}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: '700', color: 'var(--gov-dark)', fontSize: '1rem' }}>
+                      {officer.name}
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--gov-text-light)' }}>
+                      ⭐ {officer.rating} Rating
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-      <div className="card" style={{ padding: '22px' }}>
-        <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 15, color: '#1E2845', marginBottom: 16 }}>📋 Activity Timeline</h3>
-        <div style={{ position: 'relative' }}>
-          <div style={{ position: 'absolute', left: 13, top: 0, bottom: 0, width: 2, background: '#E2E8F0' }} />
-          {c.updates.map((u, i) => (
-            <div key={i} style={{ display: 'flex', gap: 14, marginBottom: 16, animation: `slideIn .3s ease ${i * .04}s both` }}>
-              <div style={{ width: 26, height: 26, borderRadius: '50%', background: u.by?.includes('AI') || u.by === 'System' ? '#0A7EA4' : '#8B5CF6', flexShrink: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#fff' }}>
-                {u.by?.includes('AI') || u.by === 'System' ? '🤖' : '👮'}
-              </div>
-              <div style={{ flex: 1, paddingTop: 2 }}>
-                <div style={{ fontSize: 13, color: '#1E2845', lineHeight: 1.5 }}>{u.msg}</div>
-                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>{u.by} • {timeAgo(u.time)}</div>
-              </div>
-            </div>
-          ))}
+          )}
         </div>
       </div>
     </div>
@@ -79,184 +181,128 @@ function TrackView({ c }) {
 }
 
 export default function CitizenPortal() {
-  const { submitComplaint, notify, complaints, addNotification } = useApp();
-  const { t } = useTranslation();
+  const { submitComplaint, notify, complaints, user, signOut, supabaseService, refreshComplaints } = useApp();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [view, setView] = useState('home');
   const [step, setStep] = useState(1);
   const [analyzing, setAnalyzing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [triage, setTriage] = useState(null);
   const [ticket, setTicket] = useState(null);
   const [trackId, setTrackId] = useState('');
   const [tracked, setTracked] = useState(null);
-  const [form, setForm] = useState({ name: '', phone: '', location: '', ward: '', title: '', description: '', photo: null });
+  const [form, setForm] = useState({ name: '', phone: '', location: '', ward: '', title: '', description: '', photo: null, gpsCoordinates: null });
   const [photoMode, setPhotoMode] = useState(false);
-  const [photoAnalyzing, setPhotoAnalyzing] = useState(false);
-  const [cameraStatus, setCameraStatus] = useState('idle'); // idle, requesting, active, error
+  const [volunteerProfile, setVolunteerProfile] = useState(null);
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [stream, setStream] = useState(null);
 
-  // Cleanup camera stream on unmount
+  // Load volunteer profile
   useEffect(() => {
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+    const loadVolunteerProfile = async () => {
+      if (user) {
+        try {
+          const profile = await supabaseService.getVolunteerProfile(user.id);
+          setVolunteerProfile(profile);
+        } catch (error) {
+          console.error('Error loading volunteer profile:', error);
+        }
       }
     };
-  }, [stream]);
+    loadVolunteerProfile();
+  }, [user, supabaseService]);
 
-  // Check camera permissions on component mount
+  // Handle URL-based navigation
   useEffect(() => {
-    const checkCameraSupport = async () => {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        console.log('Camera not supported');
-        return;
+    const path = location.pathname;
+    if (path === '/citizen/file') {
+      setView('file');
+    } else if (path === '/citizen/track') {
+      setView('track');
+    } else if (path === '/citizen/success') {
+      setView('success');
+    } else {
+      setView('home');
+    }
+  }, [location.pathname]);
+
+  // Subscribe to realtime complaint updates
+  useEffect(() => {
+    if (!user) return;
+
+    console.log('Setting up realtime subscription for user complaints');
+    const subscriptionId = supabaseService.subscribeToComplaints(
+      (payload) => {
+        console.log('Realtime update received:', payload);
+        // Refresh complaints when any change occurs
+        refreshComplaints();
+      },
+      { userId: user.id }
+    );
+
+    // Also set up polling as fallback (every 10 seconds)
+    const pollInterval = setInterval(() => {
+      console.log('Polling for complaint updates...');
+      refreshComplaints();
+    }, 10000);
+
+    return () => {
+      if (subscriptionId) {
+        supabaseService.unsubscribe(subscriptionId);
       }
-      
-      try {
-        // Check if we can enumerate devices (indicates some level of permission)
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
-        console.log(`Found ${videoDevices.length} camera(s)`);
-      } catch (err) {
-        console.log('Camera enumeration failed:', err);
-      }
+      clearInterval(pollInterval);
     };
+  }, [user, supabaseService, refreshComplaints]);
+
+  // Navigation helpers
+  const navigateToView = (viewName) => {
+    setView(viewName);
+    if (viewName === 'home') {
+      navigate('/citizen');
+    } else if (viewName === 'leaderboard') {
+      navigate('/leaderboard');
+    } else {
+      navigate(`/citizen/${viewName}`);
+    }
     
-    checkCameraSupport();
-  }, []);
+    // Auto-capture GPS when navigating to file complaint
+    if (viewName === 'file') {
+      captureGPS();
+    }
+  };
+
+  // GPS capture function
+  const captureGPS = async () => {
+    try {
+      const result = await locationService.getCurrentLocation();
+      if (result.success) {
+        f('gpsCoordinates', result.location);
+        console.log('GPS captured:', result.location);
+        notify('📍 Location captured automatically', 'success');
+      } else {
+        console.warn('GPS capture failed:', result.error);
+      }
+    } catch (error) {
+      console.error('GPS error:', error);
+    }
+  };
 
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
+  // Camera functions
   const startCamera = async () => {
     try {
-      setCameraStatus('requesting');
-      
-      // Check if mediaDevices is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setCameraStatus('error');
-        notify('Camera not supported on this device/browser', 'error');
-        return;
-      }
-
-      // Check if we're on HTTPS (required for camera access)
-      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-        setCameraStatus('error');
-        notify('Camera requires HTTPS. Please use https://localhost:3000', 'error');
-        return;
-      }
-
-      console.log('Starting camera access...');
-      console.log('Protocol:', window.location.protocol);
-      console.log('Hostname:', window.location.hostname);
-
-      // Try different camera configurations in order of preference
-      const cameraConfigs = [
-        // Mobile back camera (best for capturing issues)
-        { 
-          video: { 
-            facingMode: { exact: 'environment' },
-            width: { ideal: 1280, max: 1920 },
-            height: { ideal: 720, max: 1080 }
-          } 
-        },
-        // Mobile back camera (fallback)
-        { 
-          video: { 
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          } 
-        },
-        // Front camera
-        { 
-          video: { 
-            facingMode: 'user',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          } 
-        },
-        // Any available camera
-        { video: { width: { ideal: 1280 }, height: { ideal: 720 } } },
-        // Basic video (last resort)
-        { video: true }
-      ];
-
-      let mediaStream = null;
-      let lastError = null;
-
-      for (let i = 0; i < cameraConfigs.length; i++) {
-        try {
-          console.log(`Trying camera config ${i + 1}:`, cameraConfigs[i]);
-          mediaStream = await navigator.mediaDevices.getUserMedia(cameraConfigs[i]);
-          console.log('Camera access successful with config:', i + 1);
-          break;
-        } catch (error) {
-          console.log(`Camera config ${i + 1} failed:`, error.name, error.message);
-          lastError = error;
-          
-          // If permission denied, don't try other configs
-          if (error.name === 'NotAllowedError') {
-            break;
-          }
-        }
-      }
-
-      if (!mediaStream) {
-        throw lastError || new Error('All camera configurations failed');
-      }
-
-      // Set up video element
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
       setStream(mediaStream);
-      setCameraStatus('active');
-      
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-        
-        // Handle video loading
-        const handleVideoLoad = () => {
-          videoRef.current.play().then(() => {
-            console.log('Video playback started successfully');
-            setPhotoMode(true);
-            notify('Camera started successfully!', 'success');
-          }).catch(playError => {
-            console.error('Video play error:', playError);
-            setCameraStatus('error');
-            notify('Camera started but video playback failed', 'error');
-          });
-        };
-
-        if (videoRef.current.readyState >= 2) {
-          // Video is already loaded
-          handleVideoLoad();
-        } else {
-          // Wait for video to load
-          videoRef.current.onloadedmetadata = handleVideoLoad;
-        }
+        setPhotoMode(true);
       }
-
     } catch (err) {
-      console.error('Camera access error:', err);
-      setCameraStatus('error');
-      
-      let errorMessage = 'Camera access failed. ';
-      
-      if (err.name === 'NotAllowedError') {
-        errorMessage += 'Please allow camera permissions when prompted and try again.';
-      } else if (err.name === 'NotFoundError') {
-        errorMessage += 'No camera found on this device.';
-      } else if (err.name === 'NotSupportedError') {
-        errorMessage += 'Camera not supported on this browser.';
-      } else if (err.name === 'NotReadableError') {
-        errorMessage += 'Camera is being used by another application. Please close other apps and try again.';
-      } else if (err.name === 'OverconstrainedError') {
-        errorMessage += 'Camera constraints not supported. Trying basic camera access...';
-      } else {
-        errorMessage += `Error: ${err.message}. Please check camera permissions and try again.`;
-      }
-      
-      notify(errorMessage, 'error');
+      notify('Camera access failed', 'error');
     }
   };
 
@@ -266,7 +312,6 @@ export default function CitizenPortal() {
       setStream(null);
     }
     setPhotoMode(false);
-    setCameraStatus('idle');
   };
 
   const capturePhoto = () => {
@@ -291,646 +336,806 @@ export default function CitizenPortal() {
     if (file && file.type.startsWith('image/')) {
       f('photo', file);
       analyzePhoto(file);
-    } else {
-      notify('Please select a valid image file', 'error');
     }
   };
 
   const analyzePhoto = async (photo) => {
-    setPhotoAnalyzing(true);
-    await new Promise(r => setTimeout(r, 2000)); // Simulate AI processing
-    
-    // Simulate AI image classification
-    const classification = aiImageClassification(photo.name);
-    f('title', classification.title);
-    f('description', classification.description);
-    
-    // Add notification for photo analysis
-    addNotification({
-      type: 'photo_analyzed',
-      title: 'Photo Analysis Complete',
-      message: `AI has analyzed your photo and auto-filled the complaint details: "${classification.title}"`,
-      icon: '🤖',
-      priority: 'Medium'
-    });
-    
-    setPhotoAnalyzing(false);
-    notify('Photo analyzed! Please fill in your contact details.', 'success');
-    
-    // After photo analysis, go to step 1 to fill personal info
-    setStep(1);
+    try {
+      const classification = await aiImageClassification(photo);
+      f('title', classification.title);
+      f('description', classification.description);
+      notify('Photo analyzed with AI!', 'success');
+      setStep(1);
+    } catch (error) {
+      notify('Photo analysis failed', 'error');
+    }
   };
 
   const analyze = async () => {
-    if (!form.title || !form.description) { notify('Fill in complaint title and description', 'error'); return; }
-    
-    // If we already have photo analysis, skip the AI analysis step
-    if (form.photo && triage) {
-      setStep(3);
+    if (!form.title || !form.description) {
+      notify('Fill in complaint title and description', 'error');
       return;
     }
     
     setAnalyzing(true);
     await new Promise(r => setTimeout(r, 1800));
+    
     const triageData = form.photo 
       ? aiTriage(form.description + ' ' + form.title, form.photo)
       : aiTriage(form.description + ' ' + form.title);
     setTriage(triageData);
-    
-    // Add notification for AI triage completion
-    addNotification({
-      type: 'ai_triage',
-      title: 'AI Analysis Complete',
-      message: `Your complaint has been classified as "${triageData.category}" with ${triageData.confidence}% confidence and routed to ${triageData.department.name}`,
-      icon: '🎯',
-      priority: triageData.priority,
-      department: triageData.department.name
-    });
-    
     setAnalyzing(false);
     setStep(3);
   };
 
-  const doSubmit = () => {
-    if (!form.name || !form.phone || !form.location) { notify('Fill all required fields', 'error'); return; }
-    const c = submitComplaint(form);
-    setTicket(c);
-    setView('success');
-    notify(`Ticket ${c.ticketId} filed!`, 'success');
+  const doSubmit = async () => {
+    if (!form.name || !form.phone || !form.location) {
+      notify('Fill all required fields', 'error');
+      return;
+    }
+    
+    // Prevent double submission
+    if (submitting) {
+      console.log('Already submitting, ignoring duplicate call');
+      return;
+    }
+    
+    setSubmitting(true);
+    
+    try {
+      const c = await submitComplaint(form);
+      if (c) {
+        // Ensure ticket ID is in the right format
+        const ticketId = c.ticket_id || c.ticketId || 'NV-' + String(Date.now()).slice(-6);
+        const ticketWithId = {
+          ...c,
+          ticketId: ticketId,
+          ticket_id: ticketId
+        };
+        setTicket(ticketWithId);
+        navigateToView('success');
+        notify(`Ticket ${ticketId} filed!`, 'success');
+      }
+    } catch (error) {
+      console.error('Submit error:', error);
+      notify('Failed to submit complaint. Please try again.', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const doTrack = () => {
-    const c = complaints.find(x => x.ticketId === trackId.toUpperCase() || x.ticketId === trackId);
-    if (c) { 
-      setTracked(c); 
-      // Add notification for tracking
-      addNotification({
-        type: 'track_details',
-        title: 'Complaint Details Viewed',
-        message: `You viewed details for complaint "${c.title}" (${c.ticketId})`,
-        ticketId: c.ticketId,
-        icon: '👁️',
-        priority: c.priority,
-        department: c.dept
-      });
-    } else { 
-      notify('Not found. Try NV-001 through NV-012.', 'error'); 
+  const doTrack = async () => {
+    if (!trackId) {
+      notify('Please enter a ticket ID', 'error');
+      return;
+    }
+    
+    try {
+      // First check local complaints array
+      const localComplaint = complaints.find(x => 
+        x.ticket_id === trackId.toUpperCase() || 
+        x.ticketId === trackId.toUpperCase() ||
+        x.ticket_id === trackId ||
+        x.ticketId === trackId
+      );
+      
+      if (localComplaint) {
+        setTracked(localComplaint);
+        return;
+      }
+      
+      // If not found locally, fetch from database using getComplaints
+      const allComplaints = await supabaseService.getComplaints({ userId: user.id });
+      const foundComplaint = allComplaints.find(x => 
+        x.ticket_id === trackId.toUpperCase() || 
+        x.ticket_id === trackId
+      );
+      
+      if (!foundComplaint) {
+        notify('Complaint not found. Please check your ticket ID.', 'error');
+        return;
+      }
+      
+      setTracked(foundComplaint);
+    } catch (error) {
+      console.error('Track error:', error);
+      notify('Error tracking complaint. Please try again.', 'error');
     }
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F0F4FA' }}>
-      <TopNav title={t('citizenPortal')} sub={t('fileTrackResolve')} role="citizen" />
-      <div className="main-container">
+    <div className="gov-portal">
+      {/* Government Header */}
+      <div className="gov-header">
+        <div className="gov-header-content">
+          <div className="gov-emblem">
+            <NagarVaniLogo size={80} />
+            <div>
+              <h1 className="gov-title">NagarVani</h1>
+              <p className="gov-subtitle">Government of India - Digital Citizen Services</p>
+              <p className="gov-tagline">"Voice of the City" - Empowering Civic Participation</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
+      {/* Government Navigation */}
+      <div className="gov-nav">
+        <div className="gov-nav-content">
+          <div className="gov-nav-brand">
+            <NagarVaniLogo size={32} />
+            Citizen Portal
+          </div>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <button onClick={() => navigateToView('leaderboard')} className="gov-btn gov-btn-secondary">
+              🏆 Leaderboard
+            </button>
+            <button onClick={() => navigate('/')} className="gov-btn gov-btn-outline">
+              🏠 Home
+            </button>
+            <div style={{ fontSize: '0.875rem', color: 'var(--gov-text-light)', marginRight: '0.5rem' }}>
+              Welcome, {user?.name || 'Citizen'}
+            </div>
+            <button 
+              onClick={async () => {
+                await signOut();
+                navigate('/');
+              }} 
+              className="gov-btn gov-btn-outline"
+              style={{ color: '#dc2626', borderColor: '#dc2626' }}
+            >
+              🚪 Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
         {view === 'home' && (
           <div style={{ animation: 'fadeUp .4s ease' }}>
-            <div className="hero-section">
-              <div style={{ position: 'absolute', right: -30, top: -30, width: 180, height: 180, background: '#00C2E010', borderRadius: '50%' }} />
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                <h2 style={{ color: '#fff', fontSize: 24, marginBottom: 8, lineHeight: 1.3 }}>{t('yourVoiceMatters')}</h2>
-                <p style={{ color: '#8899BB', fontSize: 14, marginBottom: 24, maxWidth: 440, lineHeight: 1.5 }}>{t('fileComplaintDescription')}</p>
-                <div className="action-buttons">
-                  <button className="btn btn-gold btn-lg mobile-btn" onClick={() => { setView('file'); setStep(1); }}>
-                    📝 <span>{t('fileComplaint')}</span>
+            {/* Government Services Grid */}
+            <div className="gov-services-grid">
+              <div className="gov-service-card" onClick={() => { navigateToView('file'); setStep(1); }}>
+                <div className="gov-service-icon">📝</div>
+                <h3 className="gov-service-title">File Complaint</h3>
+                <p className="gov-service-description">
+                  Submit civic complaints through our secure digital platform
+                </p>
+                <button className="gov-btn gov-btn-primary gov-btn-lg">
+                  File New Complaint
+                </button>
+              </div>
+
+              <div className="gov-service-card" onClick={() => { navigateToView('file'); setStep(2); startCamera(); }}>
+                <div className="gov-service-icon">📸</div>
+                <h3 className="gov-service-title">Snap & Report</h3>
+                <p className="gov-service-description">
+                  Capture issues instantly with AI-powered image analysis
+                </p>
+                <button className="gov-btn gov-btn-accent gov-btn-lg">
+                  Take Photo & Report
+                </button>
+              </div>
+
+              <div className="gov-service-card" onClick={() => navigateToView('track')}>
+                <div className="gov-service-icon">🔍</div>
+                <h3 className="gov-service-title">Track Status</h3>
+                <p className="gov-service-description">
+                  Monitor your complaint status with real-time updates
+                </p>
+                <button className="gov-btn gov-btn-secondary gov-btn-lg">
+                  Track Complaint
+                </button>
+              </div>
+
+              <div className="gov-service-card" onClick={() => navigateToView('leaderboard')}>
+                <div className="gov-service-icon">🏆</div>
+                <h3 className="gov-service-title">Citizen Leaderboard</h3>
+                <p className="gov-service-description">
+                  View rankings and earn points for civic participation
+                </p>
+                <button className="gov-btn gov-btn-success gov-btn-lg">
+                  View Rankings
+                </button>
+              </div>
+
+              {/* Volunteer Dashboard Card - Only show if user is a volunteer */}
+              {volunteerProfile && (
+                <div className="gov-service-card" onClick={() => navigate('/volunteer')} style={{ 
+                  background: 'linear-gradient(135deg, #8B5CF615 0%, #6366F115 100%)',
+                  border: '2px solid #8B5CF6'
+                }}>
+                  <div className="gov-service-icon" style={{ background: 'linear-gradient(135deg, #8B5CF6, #6366F1)' }}>
+                    🤝
+                  </div>
+                  <h3 className="gov-service-title" style={{ color: '#8B5CF6' }}>Volunteer Dashboard</h3>
+                  <p className="gov-service-description">
+                    Help your community by responding to nearby civic issues
+                  </p>
+                  <button className="gov-btn gov-btn-lg" style={{ 
+                    background: 'linear-gradient(135deg, #8B5CF6, #6366F1)',
+                    color: 'white'
+                  }}>
+                    View Tasks
                   </button>
-                  <button className="btn btn-photo btn-lg mobile-btn" onClick={() => { setView('file'); setStep(2); startCamera(); }}>
-                    📸 <span>{t('snapReport')}</span>
-                  </button>
-                  <button onClick={() => setView('track')} className="btn-outline mobile-btn">
-                    🔍 <span>{t('trackStatus')}</span>
+                  {volunteerProfile.is_available && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '1rem',
+                      right: '1rem',
+                      background: '#22C55E',
+                      color: 'white',
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '999px',
+                      fontSize: '0.75rem',
+                      fontWeight: '700'
+                    }}>
+                      ✅ Available
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Become a Volunteer Card - Show if user is NOT a volunteer */}
+              {!volunteerProfile && (
+                <div className="gov-service-card" onClick={async () => {
+                  try {
+                    // First check if profile already exists
+                    const existingProfile = await supabaseService.getVolunteerProfile(user.id);
+                    
+                    if (existingProfile) {
+                      // Profile exists, just update state
+                      setVolunteerProfile(existingProfile);
+                      notify('Volunteer profile loaded! 🎉', 'success');
+                      return;
+                    }
+                    
+                    // Profile doesn't exist, create it
+                    notify('Creating volunteer profile...', 'success');
+                    const locationModule = await import('../services/locationService');
+                    const locationResult = await locationModule.default.getCurrentLocation();
+                    
+                    await supabaseService.createVolunteerProfile(user.id, {
+                      name: user.name,
+                      phone: user.phone || '',
+                      role: 'citizen',
+                      lat: locationResult.success ? locationResult.location.latitude : null,
+                      lng: locationResult.success ? locationResult.location.longitude : null,
+                      location_address: locationResult.success ? locationResult.location.address : null
+                    });
+                    
+                    // Reload volunteer profile
+                    const profile = await supabaseService.getVolunteerProfile(user.id);
+                    setVolunteerProfile(profile);
+                    notify('Volunteer profile created! 🎉', 'success');
+                  } catch (error) {
+                    console.error('Error with volunteer profile:', error);
+                    
+                    // If error is duplicate, try to load existing profile
+                    if (error.message?.includes('duplicate') || error.message?.includes('409')) {
+                      try {
+                        const profile = await supabaseService.getVolunteerProfile(user.id);
+                        if (profile) {
+                          setVolunteerProfile(profile);
+                          notify('Volunteer profile loaded! 🎉', 'success');
+                          return;
+                        }
+                      } catch (loadError) {
+                        console.error('Could not load existing profile:', loadError);
+                      }
+                    }
+                    
+                    notify('Failed to enable volunteer mode. Please try signing out and back in.', 'error');
+                  }
+                }} style={{ 
+                  background: 'linear-gradient(135deg, #8B5CF610 0%, #6366F110 100%)',
+                  border: '2px dashed #8B5CF6',
+                  cursor: 'pointer'
+                }}>
+                  <div className="gov-service-icon" style={{ background: 'linear-gradient(135deg, #8B5CF6, #6366F1)' }}>
+                    🤝
+                  </div>
+                  <h3 className="gov-service-title" style={{ color: '#8B5CF6' }}>Become a Volunteer</h3>
+                  <p className="gov-service-description">
+                    Help your community by responding to nearby civic issues
+                  </p>
+                  <button className="gov-btn gov-btn-lg" style={{ 
+                    background: 'linear-gradient(135deg, #8B5CF6, #6366F1)',
+                    color: 'white'
+                  }}>
+                    Enable Volunteer Mode
                   </button>
                 </div>
+              )}
+            </div>
+
+            {/* Government Statistics */}
+            <div className="gov-stats-grid">
+              <div className="gov-stat-card">
+                <h3 className="gov-stat-number">{complaints.length}</h3>
+                <p className="gov-stat-label">Total Complaints</p>
+              </div>
+              <div className="gov-stat-card">
+                <h3 className="gov-stat-number">{complaints.filter(c => c.status === 'Resolved').length}</h3>
+                <p className="gov-stat-label">Resolved Issues</p>
+              </div>
+              <div className="gov-stat-card">
+                <h3 className="gov-stat-number">{Math.round((complaints.filter(c => c.status === 'Resolved').length / complaints.length) * 100)}%</h3>
+                <p className="gov-stat-label">Resolution Rate</p>
+              </div>
+              <div className="gov-stat-card">
+                <h3 className="gov-stat-number">24h</h3>
+                <p className="gov-stat-label">Avg Response Time</p>
               </div>
             </div>
-            <div>
-              <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: 17, color: '#1E2845', marginBottom: 14 }}>📋 {t('recentActivity')}</h3>
-              {complaints.slice(0, 4).map(c => {
-                const d = DEPARTMENTS.find(x => x.id === c.dept);
-                return (
-                  <div key={c.id} className="card activity-card" style={{ padding: '14px 18px', marginBottom: 10, borderLeft: `4px solid ${d?.color}` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 13, color: '#1E2845', marginBottom: 3, wordBreak: 'break-word' }}>{c.title}</div>
-                        <div style={{ fontSize: 11, color: '#64748B' }}>📍 {c.location} • {timeAgo(c.createdAt)}</div>
+
+            {/* Recent Activity */}
+            <div className="gov-card">
+              <div className="gov-card-header">
+                <h3 className="gov-card-title">
+                  <div className="gov-card-icon">📋</div>
+                  Recent Activity
+                </h3>
+              </div>
+              <div className="gov-card-body">
+                {complaints.slice(0, 4).map(c => {
+                  const d = DEPARTMENTS.find(x => x.id === c.dept);
+                  const ticketId = c.ticket_id || c.ticketId;
+                  return (
+                    <div key={c.id} style={{ 
+                      padding: '1rem', 
+                      marginBottom: '0.75rem', 
+                      background: '#f8fafc', 
+                      borderRadius: '8px',
+                      borderLeft: `4px solid ${d?.color}`,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
+                          <div style={{ fontWeight: '600', color: 'var(--gov-dark)' }}>
+                            {c.title}
+                          </div>
+                          {ticketId && (
+                            <div style={{ 
+                              fontSize: '0.75rem', 
+                              fontWeight: '700',
+                              color: 'var(--gov-blue)',
+                              background: 'var(--gov-blue-light)',
+                              padding: '0.125rem 0.5rem',
+                              borderRadius: '4px',
+                              letterSpacing: '0.5px'
+                            }}>
+                              {ticketId}
+                            </div>
+                          )}
+                          {c.is_volunteer_assigned && (
+                            <div style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              padding: '0.125rem 0.5rem',
+                              background: '#8B5CF615',
+                              border: '1px solid #8B5CF6',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: '700',
+                              color: '#8B5CF6'
+                            }}>
+                              <span>🤝</span>
+                              Volunteer
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--gov-text-light)' }}>
+                          📍 {c.location} • {timeAgo(c.createdAt)}
+                        </div>
                       </div>
                       <StatusBadge s={c.status} />
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
+          </div>
+        )}
+
+        {view === 'leaderboard' && (
+          <div style={{ animation: 'fadeUp .4s ease' }}>
+            <button onClick={() => navigateToView('home')} className="gov-btn gov-btn-secondary" style={{ marginBottom: '1rem' }}>
+              ← Back to Home
+            </button>
+            <LazyLeaderboard />
           </div>
         )}
 
         {view === 'track' && (
           <div style={{ animation: 'fadeUp .4s ease' }}>
-            <button onClick={() => { setView('home'); setTracked(null); setTrackId(''); }} style={{ background: 'none', border: 'none', color: '#0A7EA4', cursor: 'pointer', fontWeight: 700, fontSize: 13, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 5 }}>← Back</button>
-            <div className="card" style={{ padding: '24px', marginBottom: 20 }}>
-              <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, color: '#1E2845', marginBottom: 6 }}>🔍 Track Your Complaint</h2>
-              <p style={{ color: '#64748B', fontSize: 13, marginBottom: 20 }}>Enter your ticket ID. Try: NV-001 through NV-012</p>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <input className="input" placeholder="e.g. NV-001" value={trackId} onChange={e => setTrackId(e.target.value)} onKeyDown={e => e.key === 'Enter' && doTrack()} style={{ maxWidth: 260 }} />
-                <button className="btn btn-primary" onClick={doTrack}>Track →</button>
+            <div className="gov-card">
+              <div className="gov-card-header">
+                <h3 className="gov-card-title">
+                  <div className="gov-card-icon">🔍</div>
+                  Track Your Complaint
+                </h3>
+              </div>
+              <div className="gov-card-body">
+                <button onClick={() => { navigateToView('home'); setTracked(null); setTrackId(''); }} className="gov-btn gov-btn-secondary" style={{ marginBottom: '1.5rem' }}>
+                  ← Back to Home
+                </button>
+                
+                <div className="gov-form-group">
+                  <label className="gov-label">Ticket ID</label>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <input 
+                      className="gov-input" 
+                      placeholder="e.g. NV-001" 
+                      value={trackId} 
+                      onChange={e => setTrackId(e.target.value)} 
+                      style={{ flex: 1 }}
+                    />
+                    <button className="gov-btn gov-btn-primary" onClick={doTrack}>
+                      Track Status
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
             {tracked && <TrackView c={tracked} />}
+            {tracked && (
+              <div style={{ marginTop: '1.5rem' }}>
+                <AuditTrail complaintId={tracked.id} ticketId={tracked.ticket_id || tracked.ticketId} />
+              </div>
+            )}
           </div>
         )}
 
         {view === 'file' && (
           <div style={{ animation: 'fadeUp .4s ease' }}>
-            <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', color: '#0A7EA4', cursor: 'pointer', fontWeight: 700, fontSize: 13, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 5 }}>← Back</button>
-            {/* Step indicator */}
-            <div className="step-indicator">
-              {[['1', 'Your Info'], ['2', 'Complaint'], ['3', 'AI Review'], ['4', 'Submit']].map(([n, l], i) => (
-                <React.Fragment key={n}>
-                  <div className="step-item" style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <div className="step-circle" style={{ width: 30, height: 30, borderRadius: '50%', background: step > i + 1 ? '#22C55E' : step === i + 1 ? '#0A7EA4' : '#E2E8F0', color: step >= i + 1 ? '#fff' : '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, transition: 'all .3s' }}>{step > i + 1 ? '✓' : n}</div>
-                    <span className="step-label" style={{ fontSize: 12, fontWeight: 700, color: step === i + 1 ? '#0A7EA4' : '#94A3B8' }}>{l}</span>
-                  </div>
-                  {i < 3 && <div className="step-line" style={{ flex: 1, height: 2, background: step > i + 1 ? '#22C55E' : '#E2E8F0', margin: '0 6px', transition: 'all .3s' }} />}
-                </React.Fragment>
-              ))}
-            </div>
-
-            {step === 1 && (
-              <div className="card" style={{ padding: '24px', animation: 'fadeUp .3s ease' }}>
-                <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, color: '#1E2845', marginBottom: 18 }}>{t('yourInformation')}</h2>
+            <div className="gov-card">
+              <div className="gov-card-header">
+                <h3 className="gov-card-title">
+                  <div className="gov-card-icon">📝</div>
+                  File New Complaint
+                </h3>
+              </div>
+              <div className="gov-card-body">
+                <button onClick={() => navigateToView('home')} className="gov-btn gov-btn-secondary" style={{ marginBottom: '1.5rem' }}>
+                  ← Back to Home
+                </button>
                 
-                {/* Show photo analysis result if available */}
-                {form.photo && form.title && (
-                  <div style={{ 
-                    background: 'linear-gradient(135deg, #22C55E15, #22C55E08)', 
-                    border: '1px solid #22C55E30', 
-                    borderRadius: 10, 
-                    padding: '12px 16px', 
-                    marginBottom: 20,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12
-                  }}>
-                    <div style={{ fontSize: 20 }}>🤖</div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#22C55E', marginBottom: 2 }}>
-                        AI Analysis Complete
+                {/* Government Progress Steps */}
+                <div className="gov-steps" style={{ marginBottom: '2rem' }}>
+                  {[
+                    { num: '1', label: 'Your Information', icon: '👤' },
+                    { num: '2', label: 'Complaint Details', icon: '📝' },
+                    { num: '3', label: 'AI Review', icon: '🤖' },
+                    { num: '4', label: 'Submit', icon: '✅' }
+                  ].map((s, i) => (
+                    <div key={s.num} className={`gov-step ${step === i + 1 ? 'active' : ''} ${step > i + 1 ? 'completed' : ''}`}>
+                      <div className="gov-step-circle">
+                        {step > i + 1 ? '✓' : s.icon}
                       </div>
-                      <div style={{ fontSize: 12, color: '#64748B' }}>
-                        Complaint details auto-filled: "{form.title}"
+                      <div className="gov-step-label">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {step === 1 && (
+                  <div>
+                    <h4 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--gov-dark)', marginBottom: '1.5rem' }}>
+                      Personal Information
+                    </h4>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                      <div className="gov-form-group">
+                        <label className="gov-label">Full Name *</label>
+                        <input 
+                          className="gov-input" 
+                          placeholder="e.g. Priya Sharma" 
+                          value={form.name} 
+                          onChange={e => f('name', e.target.value)} 
+                        />
+                      </div>
+                      <div className="gov-form-group">
+                        <label className="gov-label">Phone Number *</label>
+                        <input 
+                          className="gov-input" 
+                          placeholder="10-digit mobile number" 
+                          value={form.phone} 
+                          onChange={e => f('phone', e.target.value)} 
+                        />
                       </div>
                     </div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+                      <div className="gov-form-group">
+                        <label className="gov-label">Location *</label>
+                        <input 
+                          className="gov-input" 
+                          placeholder="Street, Area, City" 
+                          value={form.location} 
+                          onChange={e => f('location', e.target.value)} 
+                        />
+                      </div>
+                      <div className="gov-form-group">
+                        <label className="gov-label">Ward/Pincode</label>
+                        <input 
+                          className="gov-input" 
+                          placeholder="e.g. Ward 42 or 110001" 
+                          value={form.ward} 
+                          onChange={e => f('ward', e.target.value)} 
+                        />
+                      </div>
+                    </div>
+                    
+                    <button 
+                      className="gov-btn gov-btn-primary gov-btn-lg" 
+                      onClick={() => { 
+                        if (!form.name || !form.phone || !form.location) { 
+                          notify('Please fill all required fields', 'error'); 
+                          return; 
+                        } 
+                        setStep(2);
+                      }}
+                      style={{ width: '100%' }}
+                    >
+                      Next: Complaint Details →
+                    </button>
                   </div>
                 )}
-                
-                <div className="grid-2" style={{ marginBottom: 14 }}>
-                  <div><label>{t('fullName')} *</label><input className="input" placeholder="e.g. Priya Sharma" value={form.name} onChange={e => f('name', e.target.value)} /></div>
-                  <div><label>{t('phoneNumber')} *</label><input className="input" placeholder="10-digit number" value={form.phone} onChange={e => f('phone', e.target.value)} /></div>
-                </div>
-                <div className="grid-2" style={{ marginBottom: 22 }}>
-                  <div><label>{t('location')} *</label><input className="input" placeholder="Street, Area, City" value={form.location} onChange={e => f('location', e.target.value)} /></div>
-                  <div><label>{t('wardPincode')}</label><input className="input" placeholder="e.g. Ward 42" value={form.ward} onChange={e => f('ward', e.target.value)} /></div>
-                </div>
-                <button className="btn btn-primary btn-lg" onClick={async () => { 
-                  if (!form.name || !form.phone || !form.location) { 
-                    notify('Fill required fields', 'error'); 
-                    return; 
-                  } 
-                  
-                  // If we have photo and AI analysis, run triage and go to step 3
-                  if (form.photo && form.title && form.description && !triage) {
-                    setAnalyzing(true);
-                    await new Promise(r => setTimeout(r, 1800));
-                    const triageData = aiTriage(form.description + ' ' + form.title, form.photo);
-                    setTriage(triageData);
-                    
-                    // Add notification for AI triage completion
-                    addNotification({
-                      type: 'ai_triage',
-                      title: 'AI Analysis Complete',
-                      message: `Your complaint has been classified as "${triageData.category}" with ${triageData.confidence}% confidence and routed to ${triageData.department.name}`,
-                      icon: '🎯',
-                      priority: triageData.priority,
-                      department: triageData.department.name
-                    });
-                    
-                    setAnalyzing(false);
-                    setStep(3);
-                  } else if (form.photo && form.title && form.description && triage) {
-                    setStep(3);
-                  } else {
-                    setStep(2);
-                  }
-                }}>
-                  {analyzing ? (
-                    <><Spinner size={16} color="#fff" /> Analyzing...</>
-                  ) : (
-                    form.photo && form.title ? 'Review AI Analysis →' : 'Next →'
-                  )}
-                </button>
-              </div>
-            )}
 
-            {step === 2 && (
-              <div className="card" style={{ padding: '24px', animation: 'fadeUp .3s ease' }}>
-                <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, color: '#1E2845', marginBottom: 6 }}>Describe Your Complaint</h2>
-                <p style={{ color: '#64748B', fontSize: 13, marginBottom: 16 }}>Take a photo or describe the issue. Our AI will classify and route it automatically.</p>
-                
-                {/* Photo Capture Section */}
-                <div className="photo-section" style={{ marginBottom: 20 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#64748B', marginBottom: 8 }}>📸 Visual Evidence (Optional)</div>
-                  
-                  {!form.photo && !photoMode && (
-                    <div className="photo-options">
-                      {/* Camera Test Button */}
-                      <button 
-                        className="btn btn-info mobile-btn" 
-                        onClick={async () => {
-                          console.log('=== CAMERA DIAGNOSTIC TEST ===');
-                          console.log('Protocol:', window.location.protocol);
-                          console.log('Hostname:', window.location.hostname);
-                          console.log('Full URL:', window.location.href);
-                          console.log('MediaDevices supported:', !!navigator.mediaDevices);
-                          console.log('getUserMedia supported:', !!navigator.mediaDevices?.getUserMedia);
-                          
-                          // Check available devices
-                          if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-                            try {
-                              const devices = await navigator.mediaDevices.enumerateDevices();
-                              const videoDevices = devices.filter(device => device.kind === 'videoinput');
-                              console.log('Available video devices:', videoDevices.length);
-                              videoDevices.forEach((device, index) => {
-                                console.log(`Camera ${index + 1}:`, device.label || 'Unknown Camera', device.deviceId);
-                              });
-                            } catch (enumError) {
-                              console.log('Device enumeration failed:', enumError);
-                            }
-                          }
-                          
-                          // Test basic camera access
-                          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                            try {
-                              console.log('Testing basic camera access...');
-                              const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                              console.log('✅ Camera test successful!', testStream);
-                              console.log('Video tracks:', testStream.getVideoTracks().length);
-                              testStream.getVideoTracks().forEach((track, index) => {
-                                console.log(`Track ${index + 1}:`, track.label, track.getSettings());
-                              });
-                              notify('✅ Camera test successful! Camera is working properly.', 'success');
-                              testStream.getTracks().forEach(track => track.stop()); // Stop test stream
-                            } catch (err) {
-                              console.error('❌ Camera test failed:', err);
-                              console.log('Error details:', {
-                                name: err.name,
-                                message: err.message,
-                                constraint: err.constraint
-                              });
-                              notify(`❌ Camera test failed: ${err.name} - ${err.message}`, 'error');
-                            }
-                          } else {
-                            console.log('❌ Camera API not supported');
-                            notify('❌ Camera API not supported in this browser', 'error');
-                          }
-                          
-                          console.log('=== END DIAGNOSTIC TEST ===');
-                        }}
-                        style={{ marginRight: 10, marginBottom: 10, background: '#0EA5E9' }}
-                      >
-                        🧪 Test Camera
-                      </button>
+                {step === 2 && (
+                  <div>
+                    <h4 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--gov-dark)', marginBottom: '1.5rem' }}>
+                      Complaint Details & Evidence
+                    </h4>
+                    
+                    {/* Photo Upload Section */}
+                    <div className="gov-photo-upload" style={{ marginBottom: '2rem' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--gov-text-light)', marginBottom: '1rem', textAlign: 'center' }}>
+                        📸 Visual Evidence (Optional but Recommended)
+                      </div>
                       
-                      <button 
-                        className="btn btn-primary mobile-btn" 
-                        onClick={startCamera}
-                        disabled={cameraStatus === 'requesting'}
-                        style={{ marginRight: 10, marginBottom: 10 }}
-                      >
-                        {cameraStatus === 'requesting' ? (
-                          <><Spinner size={16} color="#fff" /> Requesting Camera...</>
-                        ) : (
-                          '📷 Take Photo'
-                        )}
-                      </button>
-                      <button 
-                        className="btn btn-secondary mobile-btn" 
-                        onClick={() => fileInputRef.current?.click()}
-                        style={{ marginBottom: 10 }}
-                      >
-                        📁 Upload Photo
-                      </button>
-                      
-                      {/* Mobile Camera Capture (Alternative) */}
-                      <button 
-                        className="btn btn-success mobile-btn" 
-                        onClick={() => {
-                          // Create a temporary input for mobile camera
-                          const input = document.createElement('input');
-                          input.type = 'file';
-                          input.accept = 'image/*';
-                          input.capture = 'environment'; // Use back camera
-                          input.onchange = (e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                              f('photo', file);
-                              analyzePhoto(file);
-                            }
-                          };
-                          input.click();
-                        }}
-                        style={{ marginBottom: 10 }}
-                      >
-                        📱 Mobile Camera
-                      </button>
-                      
+                      {!form.photo && !photoMode && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                          <button className="gov-btn gov-btn-primary" onClick={startCamera}>
+                            📷 Take Photo
+                          </button>
+                          <button className="gov-btn gov-btn-secondary" onClick={() => fileInputRef.current?.click()}>
+                            📁 Upload Photo
+                          </button>
+                        </div>
+                      )}
+
+                      {photoMode && (
+                        <div style={{ marginBottom: '1rem' }}>
+                          <video 
+                            ref={videoRef} 
+                            autoPlay 
+                            playsInline
+                            style={{ width: '100%', maxHeight: '300px', borderRadius: '12px' }}
+                          />
+                          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                            <button className="gov-btn gov-btn-success" onClick={capturePhoto} style={{ marginRight: '1rem' }}>
+                              📸 Capture
+                            </button>
+                            <button className="gov-btn gov-btn-secondary" onClick={stopCamera}>
+                              ✕ Cancel
+                            </button>
+                          </div>
+                          <canvas ref={canvasRef} style={{ display: 'none' }} />
+                        </div>
+                      )}
+
+                      {form.photo && (
+                        <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+                          <img 
+                            src={URL.createObjectURL(form.photo)} 
+                            alt="Issue evidence" 
+                            style={{ maxWidth: '300px', height: '200px', objectFit: 'cover', borderRadius: '12px' }}
+                          />
+                          <div style={{ marginTop: '0.5rem' }}>
+                            <button onClick={() => f('photo', null)} className="gov-btn gov-btn-secondary">
+                              Remove Photo
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       <input 
                         ref={fileInputRef}
                         type="file" 
-                        accept="image/*" 
-                        capture="environment"
+                        accept="image/*"
                         onChange={handleFileUpload}
                         style={{ display: 'none' }}
                       />
-                      
-                      {/* HTTPS Setup Instructions */}
-                      {window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && (
-                        <div style={{ 
-                          background: '#FEF3C7', 
-                          border: '1px solid #F59E0B', 
-                          borderRadius: 8, 
-                          padding: '12px', 
-                          marginTop: 10,
-                          fontSize: 12,
-                          color: '#92400E'
-                        }}>
-                          <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠️ HTTPS Required for Camera</div>
-                          <div style={{ marginBottom: 8 }}>
-                            Camera access requires HTTPS. To enable camera:
-                          </div>
-                          <div style={{ background: '#000', color: '#0EA5E9', padding: '8px', borderRadius: 4, fontFamily: 'monospace', fontSize: 11, marginBottom: 8 }}>
-                            npm run start:https-win
-                          </div>
-                          <div style={{ fontSize: 11 }}>
-                            Then visit: <strong>https://localhost:3000</strong><br/>
-                            Or use the file upload/mobile camera options above.
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Localhost HTTP warning */}
-                      {window.location.protocol === 'http:' && window.location.hostname === 'localhost' && (
-                        <div style={{ 
-                          background: '#FEF3C7', 
-                          border: '1px solid #F59E0B', 
-                          borderRadius: 8, 
-                          padding: '12px', 
-                          marginTop: 10,
-                          fontSize: 12,
-                          color: '#92400E'
-                        }}>
-                          <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠️ Camera May Not Work on HTTP</div>
-                          <div style={{ marginBottom: 8 }}>
-                            For best camera support, use HTTPS:
-                          </div>
-                          <div style={{ background: '#000', color: '#0EA5E9', padding: '8px', borderRadius: 4, fontFamily: 'monospace', fontSize: 11, marginBottom: 8 }}>
-                            npm run start:https-win
-                          </div>
-                          <div style={{ fontSize: 11 }}>
-                            Then visit: <strong>https://localhost:3000</strong>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Camera troubleshooting */}
-                      {cameraStatus === 'error' && (
-                        <div style={{ 
-                          background: '#FEF2F2', 
-                          border: '1px solid #FECACA', 
-                          borderRadius: 8, 
-                          padding: '12px', 
-                          marginTop: 10,
-                          fontSize: 12,
-                          color: '#DC2626'
-                        }}>
-                          <div style={{ fontWeight: 700, marginBottom: 4 }}>Camera Access Issues?</div>
-                          <div style={{ marginBottom: 8 }}>
-                            • Make sure you're using HTTPS (not HTTP)<br/>
-                            • Allow camera permissions when prompted<br/>
-                            • Close other apps using the camera<br/>
-                            • Try refreshing the page<br/>
-                            • Current URL: {window.location.protocol}//{window.location.host}
-                          </div>
-                          <button 
-                            className="btn btn-secondary"
-                            onClick={() => {setCameraStatus('idle'); startCamera();}}
-                            style={{ fontSize: 11, padding: '6px 12px' }}
-                          >
-                            Try Again
-                          </button>
-                        </div>
-                      )}
-                      
-                      {/* Debug info for development */}
-                      <div style={{ 
-                        background: '#F0F9FF', 
-                        border: '1px solid #BAE6FD', 
-                        borderRadius: 8, 
-                        padding: '8px', 
-                        marginTop: 10,
-                        fontSize: 11,
-                        color: '#0369A1'
-                      }}>
-                        <div style={{ fontWeight: 700, marginBottom: 4 }}>Camera Status:</div>
-                        <div>Status: <strong>{cameraStatus}</strong></div>
-                        <div>Protocol: <strong>{window.location.protocol}</strong></div>
-                        <div>URL: <strong>{window.location.href}</strong></div>
-                        <div>MediaDevices: <strong>{navigator.mediaDevices ? 'Supported' : 'Not Supported'}</strong></div>
-                        <div>getUserMedia: <strong>{navigator.mediaDevices?.getUserMedia ? 'Supported' : 'Not Supported'}</strong></div>
-                        {stream && <div>Stream Active: <strong>Yes ({stream.getVideoTracks().length} video tracks)</strong></div>}
-                      </div>
                     </div>
-                  )}
 
-                  {photoMode && (
-                    <div className="camera-interface" style={{ marginBottom: 16 }}>
-                      <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#000', width: '100%' }}>
-                        <video 
-                          ref={videoRef} 
-                          autoPlay 
-                          playsInline
-                          style={{ width: '100%', height: 'auto', maxHeight: '300px', objectFit: 'cover', display: 'block' }}
-                        />
-                        <div className="camera-controls" style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 15, alignItems: 'center' }}>
-                          <button 
-                            className="btn btn-success"
-                            onClick={capturePhoto}
-                            style={{ borderRadius: '50%', width: 60, height: 60, padding: 0, fontSize: 24, border: '3px solid #fff', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}
-                          >
-                            📸
-                          </button>
-                          <button 
-                            className="btn btn-secondary"
-                            onClick={stopCamera}
-                            style={{ borderRadius: '50%', width: 50, height: 50, padding: 0, fontSize: 16, border: '2px solid #fff', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-                      <canvas ref={canvasRef} style={{ display: 'none' }} />
-                    </div>
-                  )}
-
-                  {form.photo && (
-                    <div className="photo-preview" style={{ marginBottom: 16 }}>
-                      <div style={{ position: 'relative', display: 'inline-block' }}>
-                        <img 
-                          src={URL.createObjectURL(form.photo)} 
-                          alt="Captured issue" 
-                          style={{ width: '100%', maxWidth: 200, height: 150, objectFit: 'cover', borderRadius: 8, border: '2px solid #22C55E' }}
-                        />
-                        <button 
-                          onClick={() => f('photo', null)}
-                          style={{ position: 'absolute', top: -8, right: -8, background: '#EF4444', color: '#fff', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer', fontSize: 12 }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      {photoAnalyzing && (
-                        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, color: '#0A7EA4' }}>
-                          <Spinner size={16} color="#0A7EA4" />
-                          <span style={{ fontSize: 13, fontWeight: 600 }}>AI analyzing photo...</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#64748B', marginBottom: 8 }}>⚡ Quick fill examples:</div>
-                  <div className="sample-complaints">
-                    {SAMPLE_COMPLAINTS.map((s, i) => (
-                      <button key={i} onClick={() => { setForm(p => ({ ...p, ...s })); notify('Sample loaded!', 'info'); }} className="sample-btn">
-                        {s.title.slice(0, 28)}...
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ marginBottom: 14 }}><label>Complaint Title *</label><input className="input" placeholder="Short, clear title" value={form.title} onChange={e => f('title', e.target.value)} /></div>
-                <div style={{ marginBottom: 20 }}><label>Detailed Description *</label><textarea className="textarea" placeholder="Describe the problem — location, duration, impact on residents..." value={form.description} onChange={e => f('description', e.target.value)} style={{ minHeight: 130 }} /></div>
-                <div className="step-actions">
-                  <button className="btn btn-secondary" onClick={() => setStep(1)}>← Back</button>
-                  <button className="btn btn-primary btn-lg" onClick={analyze} disabled={analyzing} style={{ flex: 1, justifyContent: 'center', opacity: analyzing ? .9 : 1 }}>
-                    {analyzing ? <><Spinner size={16} color="#fff" /> Analyzing...</> : '🤖 Analyze with AI →'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {step === 3 && triage && (
-              <div style={{ animation: 'fadeUp .3s ease' }}>
-                <div className="card" style={{ padding: '24px', marginBottom: 16, border: '2px solid #22C55E30' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-                    <div style={{ width: 44, height: 44, background: '#22C55E18', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🤖</div>
-                    <div>
-                      <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 17, color: '#1E2845' }}>AI Triage Complete</div>
-                      <div style={{ fontSize: 12, color: '#22C55E', fontWeight: 700 }}>
-                        ✓ {triage.confidence}% confidence
-                        {form.photo && <span style={{ marginLeft: 8, color: '#0A7EA4' }}>📸 +Photo boost</span>}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid-2" style={{ marginBottom: 16 }}>
-                    {[
-                      ['🏷️ Category', triage.category],
-                      ['🏛️ Department', triage.department?.icon + ' ' + triage.department?.name],
-                      ['⚡ Priority', triage.priority],
-                      ['⏱️ SLA', `${triage.slaHours} hours`],
-                    ].map(([l, v]) => (
-                      <div key={l} style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: 8, border: '1px solid #E2E8F0' }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 3 }}>{l}</div>
-                        <div style={{ fontWeight: 700, color: '#1E2845', fontSize: 14 }}>{v}</div>
-                      </div>
-                    ))}
-                  </div>
-                  {form.photo && (
-                    <div style={{ padding: '12px 14px', background: '#22C55E08', border: '1px solid #22C55E20', borderRadius: 10, marginBottom: 16 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 8 }}>📸 VISUAL EVIDENCE</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <img 
-                          src={URL.createObjectURL(form.photo)} 
-                          alt="Issue evidence" 
-                          style={{ width: 60, height: 45, objectFit: 'cover', borderRadius: 6 }}
-                        />
-                        <div>
-                          <div style={{ fontWeight: 700, color: '#1E2845', fontSize: 13 }}>Photo Evidence Attached</div>
-                          <div style={{ fontSize: 11, color: '#22C55E', fontWeight: 700 }}>+15% AI Confidence Boost</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {triage.officer && (
-                    <div style={{ padding: '14px', background: '#0A7EA408', border: '1px solid #0A7EA420', borderRadius: 10 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 8 }}>👮 ASSIGNED OFFICER</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 36, height: 36, background: '#0A7EA4', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 13 }}>{triage.officer.avatar}</div>
-                        <div>
-                          <div style={{ fontWeight: 700, color: '#1E2845', fontSize: 13 }}>{triage.officer.name}</div>
-                          <div style={{ fontSize: 11, color: '#64748B' }}>⭐ {triage.officer.rating} • {triage.officer.load} active cases</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="step-actions">
-                  <button className="btn btn-secondary" onClick={() => setStep(2)}>← Edit</button>
-                  <button className="btn btn-primary btn-lg" onClick={() => setStep(4)} style={{ flex: 1, justifyContent: 'center' }}>Looks Good — Confirm →</button>
-                </div>
-              </div>
-            )}
-
-            {step === 4 && (
-              <div className="card" style={{ padding: '24px', animation: 'fadeUp .3s ease' }}>
-                <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 20, color: '#1E2845', marginBottom: 18 }}>Review & Submit</h2>
-                <div style={{ background: '#F8FAFC', borderRadius: 10, padding: 18, marginBottom: 20 }}>
-                  {form.photo && (
-                    <div style={{ marginBottom: 16, textAlign: 'center' }}>
-                      <img 
-                        src={URL.createObjectURL(form.photo)} 
-                        alt="Issue evidence" 
-                        style={{ width: '100%', maxWidth: 300, height: 200, objectFit: 'cover', borderRadius: 8, border: '2px solid #22C55E' }}
+                    <div className="gov-form-group" style={{ marginBottom: '1.5rem' }}>
+                      <label className="gov-label">Complaint Title *</label>
+                      <input 
+                        className="gov-input" 
+                        placeholder="Short, clear title describing the issue" 
+                        value={form.title} 
+                        onChange={e => f('title', e.target.value)} 
                       />
-                      <div style={{ fontSize: 11, color: '#22C55E', fontWeight: 700, marginTop: 6 }}>📸 Photo Evidence Attached</div>
                     </div>
-                  )}
-                  <div style={{ fontWeight: 700, color: '#1E2845', fontSize: 15, marginBottom: 6 }}>{form.title}</div>
-                  <div style={{ color: '#64748B', fontSize: 13, marginBottom: 12, lineHeight: 1.5 }}>{form.description}</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: 12, color: '#64748B' }}>
-                    <span>👤 {form.name}</span><span>📍 {form.location}</span>
-                    <span>🏷️ {triage?.category}</span><span>⚡ {triage?.priority}</span>
-                    {form.photo && <span style={{ color: '#22C55E', fontWeight: 700 }}>📸 +Photo</span>}
+
+                    <div className="gov-form-group" style={{ marginBottom: '2rem' }}>
+                      <label className="gov-label">Detailed Description *</label>
+                      <textarea 
+                        className="gov-input gov-textarea" 
+                        placeholder="Describe the problem in detail..." 
+                        value={form.description} 
+                        onChange={e => f('description', e.target.value)} 
+                        style={{ minHeight: '150px' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      <button className="gov-btn gov-btn-secondary" onClick={() => setStep(1)}>
+                        ← Back
+                      </button>
+                      <button 
+                        className="gov-btn gov-btn-primary gov-btn-lg" 
+                        onClick={analyze} 
+                        disabled={analyzing}
+                        style={{ flex: 1 }}
+                      >
+                        {analyzing ? 'Analyzing...' : '🤖 Analyze with AI →'}
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div className="step-actions">
-                  <button className="btn btn-secondary" onClick={() => setStep(3)}>← Back</button>
-                  <button className="btn btn-success btn-lg" onClick={doSubmit} style={{ flex: 1, justifyContent: 'center' }}>✅ Submit Complaint</button>
-                </div>
+                )}
+
+                {step === 3 && triage && (
+                  <div>
+                    <h4 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--gov-dark)', marginBottom: '1.5rem' }}>
+                      AI Analysis Results
+                    </h4>
+                    
+                    <div className="gov-alert gov-alert-success" style={{ marginBottom: '2rem' }}>
+                      <div>
+                        <strong>🤖 AI Analysis Complete:</strong> {triage.confidence}% confidence
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                      <div className="gov-stat-card">
+                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--gov-text-light)' }}>Category</div>
+                        <div style={{ fontSize: '1.125rem', fontWeight: '700' }}>{triage.category}</div>
+                      </div>
+                      <div className="gov-stat-card">
+                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--gov-text-light)' }}>Department</div>
+                        <div style={{ fontSize: '1.125rem', fontWeight: '700' }}>{triage.department?.name}</div>
+                      </div>
+                      <div className="gov-stat-card">
+                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--gov-text-light)' }}>Priority</div>
+                        <div style={{ fontSize: '1.125rem', fontWeight: '700' }}>{triage.priority}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      <button className="gov-btn gov-btn-secondary" onClick={() => setStep(2)}>
+                        ← Edit Details
+                      </button>
+                      <button 
+                        className="gov-btn gov-btn-primary gov-btn-lg" 
+                        onClick={() => setStep(4)} 
+                        style={{ flex: 1 }}
+                      >
+                        Proceed to Submit →
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {step === 4 && (
+                  <div>
+                    <h4 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--gov-dark)', marginBottom: '1.5rem' }}>
+                      Review & Submit
+                    </h4>
+
+                    <div className="gov-card" style={{ marginBottom: '2rem' }}>
+                      <div className="gov-card-body">
+                        <h5 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '0.5rem' }}>
+                          {form.title}
+                        </h5>
+                        <p style={{ marginBottom: '1rem' }}>{form.description}</p>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', fontSize: '0.875rem' }}>
+                          <div><strong>Name:</strong> {form.name}</div>
+                          <div><strong>Location:</strong> {form.location}</div>
+                          <div><strong>Category:</strong> {triage?.category}</div>
+                          <div><strong>Priority:</strong> {triage?.priority}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      <button className="gov-btn gov-btn-secondary" onClick={() => setStep(3)}>
+                        ← Back
+                      </button>
+                      <button 
+                        className="gov-btn gov-btn-success gov-btn-lg" 
+                        onClick={doSubmit} 
+                        style={{ flex: 1 }}
+                      >
+                        ✅ Submit to Government
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         )}
 
         {view === 'success' && ticket && (
-          <div style={{ textAlign: 'center', animation: 'fadeUp .4s ease' }}>
-            <div className="card" style={{ padding: '48px 36px', maxWidth: 500, margin: '0 auto' }}>
-              <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
-              <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 26, color: '#1E2845', marginBottom: 8 }}>Complaint Filed!</h2>
-              <div style={{ display: 'inline-block', background: '#0A7EA415', color: '#0A7EA4', padding: '9px 24px', borderRadius: 999, fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 22, marginBottom: 18, border: '2px solid #0A7EA430' }}>{ticket.ticketId}</div>
-              <p style={{ color: '#64748B', fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
-                Routed to <strong>{DEPARTMENTS.find(d => d.id === ticket.dept)?.name}</strong>. Resolution in <strong>{ticket.slaHours}hrs</strong>. SMS updates will follow.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <button className="btn btn-primary btn-lg" style={{ justifyContent: 'center' }} onClick={() => { setView('track'); setTrackId(ticket.ticketId); setTracked(ticket); }}>🔍 Track My Complaint</button>
-                <button className="btn btn-secondary btn-lg" style={{ justifyContent: 'center' }} onClick={() => { setView('home'); setStep(1); setForm({ name: '', phone: '', location: '', ward: '', title: '', description: '' }); setTriage(null); }}>File Another</button>
+          <div style={{ animation: 'fadeUp .4s ease', textAlign: 'center' }}>
+            <div className="gov-card" style={{ maxWidth: '600px', margin: '0 auto' }}>
+              <div className="gov-card-body" style={{ padding: '3rem 2rem' }}>
+                <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>✅</div>
+                <h2 style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--gov-dark)', marginBottom: '1rem' }}>
+                  Complaint Successfully Filed!
+                </h2>
+                
+                <div style={{ 
+                  display: 'inline-block', 
+                  background: 'linear-gradient(135deg, var(--gov-primary), var(--gov-secondary))', 
+                  color: 'white', 
+                  padding: '1rem 2rem', 
+                  borderRadius: '12px', 
+                  fontSize: '1.5rem', 
+                  fontWeight: '800', 
+                  marginBottom: '1.5rem',
+                  letterSpacing: '2px'
+                }}>
+                  Ticket ID: {ticket.ticket_id || ticket.ticketId || 'Processing...'}
+                </div>
+                
+                <div className="gov-alert gov-alert-success" style={{ textAlign: 'left', marginBottom: '2rem' }}>
+                  <div>
+                    <div style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '0.5rem' }}>
+                      🏛️ Your complaint has been officially registered with the Government of India
+                    </div>
+                    <div style={{ fontSize: '0.875rem', lineHeight: 1.6 }}>
+                      • Routed to: <strong>{ticket.departments?.name || DEPARTMENTS.find(d => d.id === ticket.dept || d.id === ticket.department_id)?.name || 'Department'}</strong><br/>
+                      • Expected Resolution: <strong>{ticket.sla_hours || ticket.slaHours || 72} hours</strong><br/>
+                      • Priority: <strong style={{ textTransform: 'capitalize' }}>{ticket.priority || 'Medium'}</strong><br/>
+                      • SMS updates will be sent to your registered mobile number<br/>
+                      • You can track progress anytime using your ticket ID
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <button 
+                    className="gov-btn gov-btn-primary gov-btn-lg" 
+                    onClick={() => { 
+                      navigateToView('track'); 
+                      setTrackId(ticket.ticket_id || ticket.ticketId); 
+                      setTracked(ticket); 
+                    }}
+                    style={{ width: '100%' }}
+                  >
+                    🔍 Track My Complaint Status
+                  </button>
+                  <button 
+                    className="gov-btn gov-btn-secondary gov-btn-lg" 
+                    onClick={() => { 
+                      navigateToView('home'); 
+                      setStep(1); 
+                      setForm({ name: '', phone: '', location: '', ward: '', title: '', description: '', photo: null }); 
+                      setTriage(null);
+                      setTicket(null);
+                    }}
+                    style={{ width: '100%' }}
+                  >
+                    File Another Complaint
+                  </button>
+                </div>
               </div>
             </div>
           </div>

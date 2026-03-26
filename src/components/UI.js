@@ -57,10 +57,17 @@ export function StatCard({ label, value, icon, color, sub, trend }) {
 }
 
 export function TopNav({ title, sub, role }) {
-  const { setRole, complaints } = useApp();
+  const { setRole, complaints, signOut, user } = useApp();
   const { t } = useTranslation();
   const roleColors = { citizen: '#0A7EA4', officer: '#8B5CF6', admin: '#0D1B40' };
   const open = complaints.filter(c => ['Open', 'Escalated'].includes(c.status)).length;
+  
+  const handleSignOut = async () => {
+    await signOut();
+    // Redirect to landing page after sign out
+    window.location.href = '/';
+  };
+  
   return (
     <nav style={{
       background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '0 28px',
@@ -86,14 +93,19 @@ export function TopNav({ title, sub, role }) {
             {open} Active
           </div>
         )}
+        {user && (
+          <div style={{ fontSize: 11, color: '#64748B', whiteSpace: 'nowrap' }}>
+            {user.name || user.email}
+          </div>
+        )}
         <div className="nav-badge" style={{ background: (roleColors[role] || '#0A7EA4') + '15', color: roleColors[role] || '#0A7EA4', padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
           {role === 'citizen' ? '🧑‍💼' : role === 'officer' ? '👮' : '📊'} {role?.charAt(0).toUpperCase() + role?.slice(1)}
         </div>
         <button
-          onClick={() => setRole('landing')}
-          style={{ background: 'none', border: '1.5px solid #E2E8F0', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#64748B', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}
+          onClick={handleSignOut}
+          style={{ background: 'none', border: '1.5px solid #dc2626', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#dc2626', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}
         >
-          ← <span>{t('switchRole')}</span>
+          🚪 <span>Sign Out</span>
         </button>
       </div>
     </nav>

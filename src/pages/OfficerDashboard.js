@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { TopNav, StatusBadge, PrioBadge, timeAgo } from '../components/UI';
 import LiveMap from '../components/LiveMap';
-import { DEPARTMENTS, OFFICERS, STATUS_COLORS, AI_SUGGESTIONS } from '../data/constants';
-
-const CUR_OFFICER = OFFICERS[0]; // Rajesh Kumar — PWD Roads
+import OfficerSetup from '../components/OfficerSetup';
+import AuditTrail from '../components/AuditTrail';
+import { DEPARTMENTS, STATUS_COLORS, AI_SUGGESTIONS } from '../data/constants';
+import '../styles/officer-portal.css';
 
 function ComplaintDetail({ sel, newStatus, setNewStatus, note, setNote, doUpdate, getSLA }) {
   const dept = DEPARTMENTS.find(x => x.id === sel.dept);
-  const officer = OFFICERS.find(x => x.id === sel.officer);
   const sla = getSLA(sel);
   const suggestions = AI_SUGGESTIONS[sel.category] || ['Investigate on-site', 'Coordinate with relevant teams', 'Update citizen within 2 hours'];
 
@@ -60,6 +60,34 @@ function ComplaintDetail({ sel, newStatus, setNewStatus, note, setNote, doUpdate
         </div>
       </div>
 
+      {/* Evidence Photos */}
+      {(() => {
+        const photos = sel.photo_urls || sel.photoUrls || (sel.imageUrl ? [sel.imageUrl] : []);
+        if (!photos || photos.length === 0) return null;
+        return (
+          <div className="card" style={{ padding: '22px', marginBottom: 18 }}>
+            <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 15, color: '#1E2845', marginBottom: 14 }}>
+              📷 Evidence Photos ({photos.length})
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: photos.length === 1 ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+              {photos.map((url, i) => (
+                <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                  <img
+                    src={url}
+                    alt={`Evidence ${i + 1}`}
+                    style={{ width: '100%', height: photos.length === 1 ? 320 : 180, objectFit: 'cover', borderRadius: 10, border: '2px solid #E2E8F0', cursor: 'pointer', transition: 'transform .2s', background: '#F8FAFC' }}
+                    onMouseOver={e => e.target.style.transform = 'scale(1.02)'}
+                    onMouseOut={e => e.target.style.transform = 'scale(1)'}
+                    onError={e => e.target.parentElement.style.display = 'none'}
+                  />
+                </a>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 8 }}>Click image to view full size</div>
+          </div>
+        );
+      })()}
+
       <div className="card" style={{ padding: '22px', marginBottom: 18, border: '2px solid #8B5CF630' }}>
         <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 15, color: '#1E2845', marginBottom: 14 }}>✏️ Update Status</h3>
         <div style={{ display: 'flex', gap: 7, marginBottom: 14, flexWrap: 'wrap' }}>
@@ -80,7 +108,7 @@ function ComplaintDetail({ sel, newStatus, setNewStatus, note, setNote, doUpdate
         <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 15, color: '#1E2845', marginBottom: 16 }}>📋 Activity Log</h3>
         <div style={{ position: 'relative' }}>
           <div style={{ position: 'absolute', left: 13, top: 0, bottom: 0, width: 2, background: '#E2E8F0' }} />
-          {[...sel.updates].reverse().map((u, i) => (
+          {(sel.updates && Array.isArray(sel.updates) ? [...sel.updates].reverse() : []).map((u, i) => (
             <div key={i} style={{ display: 'flex', gap: 13, marginBottom: 14, animation: `slideIn .3s ease ${i * .04}s both` }}>
               <div style={{ width: 26, height: 26, borderRadius: '50%', background: u.by?.includes('AI') || u.by === 'System' ? '#0A7EA4' : '#8B5CF6', flexShrink: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#fff' }}>
                 {u.by?.includes('AI') || u.by === 'System' ? '🤖' : '👮'}
@@ -93,20 +121,178 @@ function ComplaintDetail({ sel, newStatus, setNewStatus, note, setNote, doUpdate
           ))}
         </div>
       </div>
+
+      {/* Blockchain Audit Trail */}
+      <div style={{ marginTop: 18 }}>
+        <AuditTrail complaintId={sel.id} ticketId={sel.ticketId || sel.ticket_id} />
+      </div>
     </div>
   );
 }
 
 export default function OfficerDashboard() {
-  const { complaints, updateComplaint, notify } = useApp();
+  const { complaints, updateComplaint, notify, user, supabaseService } = useApp();
   const [sel, setSel] = useState(null);
   const [filt, setFilt] = useState('all');
   const [note, setNote] = useState('');
   const [newStatus, setNewStatus] = useState('');
   const [activeView, setActiveView] = useState('queue'); // 'queue' | 'map'
+  const [officerProfile, setOfficerProfile] = useState(null);
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [deptComplaints, setDeptComplaints] = useState([]);
 
-  const mine = complaints.filter(c => c.officer === CUR_OFFICER.id || c.dept === CUR_OFFICER.dept);
-  const filtered = filt === 'all' ? mine : mine.filter(c => c.status === filt);
+  const loadDepartmentComplaints = useCallback(async () => {
+    if (!officerProfile?.department_id) return;
+    
+    try {
+      console.log('Loading complaints for department:', officerProfile.department_id);
+      const allComplaints = await supabaseService.getComplaints({ 
+        departmentId: officerProfile.department_id 
+      });
+      console.log('Loaded complaints:', allComplaints);
+      setDeptComplaints(allComplaints);
+    } catch (error) {
+      console.error('Error loading department complaints:', error);
+      // Fallback to complaints from context
+      setDeptComplaints(complaints.filter(c => 
+        c.department_id === officerProfile?.department_id || 
+        c.dept === officerProfile?.department_id
+      ));
+    }
+  }, [officerProfile, supabaseService, complaints]);
+
+  const checkOfficerProfile = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const profile = await supabaseService.getOfficerProfile(user.id);
+      
+      if (!profile) {
+        setNeedsSetup(true);
+      } else {
+        setOfficerProfile(profile);
+        setNeedsSetup(false);
+      }
+    } catch (error) {
+      console.error('Error checking officer profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, supabaseService]);
+
+  // Check if officer profile exists
+  useEffect(() => {
+    checkOfficerProfile();
+  }, [checkOfficerProfile]);
+
+  // Load department complaints when officer profile is loaded
+  useEffect(() => {
+    if (officerProfile?.department_id) {
+      loadDepartmentComplaints();
+      
+      // Set up polling to refresh complaints every 10 seconds
+      const pollInterval = setInterval(() => {
+        console.log('Polling for department complaint updates...');
+        loadDepartmentComplaints();
+      }, 10000);
+      
+      return () => clearInterval(pollInterval);
+    }
+  }, [officerProfile, loadDepartmentComplaints]);
+
+  const handleSetupComplete = (profile) => {
+    setOfficerProfile(profile);
+    setNeedsSetup(false);
+  };
+
+  // Show setup modal if needed
+  if (loading) {
+    return (
+      <div className="officer-portal" style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #334155 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: '600', color: 'white' }}>
+            Loading Officer Dashboard...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (needsSetup) {
+    return <OfficerSetup onComplete={handleSetupComplete} />;
+  }
+
+  // Use department complaints instead of user complaints
+  // Combine and deduplicate complaints from database and local state
+  const allComplaints = [...deptComplaints, ...complaints.filter(c => 
+    c.department_id === officerProfile?.department_id || 
+    c.dept === officerProfile?.department_id
+  )];
+  
+  // Deduplicate by ID
+  const uniqueComplaints = allComplaints.reduce((acc, complaint) => {
+    const existingIndex = acc.findIndex(c => c.id === complaint.id);
+    if (existingIndex === -1) {
+      acc.push(complaint);
+    } else {
+      // Keep the one with more data (from database usually has more fields)
+      if (Object.keys(complaint).length > Object.keys(acc[existingIndex]).length) {
+        acc[existingIndex] = complaint;
+      }
+    }
+    return acc;
+  }, []);
+  
+  // Normalize complaints to expected format
+  const normalizedComplaints = uniqueComplaints.map(c => {
+    // Map database status to UI status
+    const statusMap = {
+      'pending': 'Open',
+      'acknowledged': 'Open',
+      'in_progress': 'In Progress',
+      'resolved': 'Resolved',
+      'closed': 'Resolved',
+      'rejected': 'Rejected'
+    };
+    
+    const uiStatus = statusMap[c.status] || c.status;
+    
+    return {
+      ...c,
+      // Ensure both formats exist
+      ticketId: c.ticket_id || c.ticketId,
+      ticket_id: c.ticket_id || c.ticketId,
+      dept: c.department_id || c.dept,
+      department_id: c.department_id || c.dept,
+      citizenName: c.users?.name || c.citizenName || 'Unknown',
+      phone: c.users?.phone || c.phone || 'N/A',
+      createdAt: c.created_at ? new Date(c.created_at).getTime() : (c.createdAt || Date.now()),
+      created_at: c.created_at || new Date(c.createdAt).toISOString(),
+      slaHours: c.sla_hours || c.slaHours || 72,
+      sla_hours: c.sla_hours || c.slaHours || 72,
+      confidence: c.ai_analysis?.confidence || c.confidence || 85,
+      updates: c.updates || [],
+      officer: c.assigned_officer_id || c.officer,
+      // GPS coordinates for map
+      lat: c.gps_latitude || c.lat,
+      lng: c.gps_longitude || c.lng,
+      gps_latitude: c.gps_latitude || c.lat,
+      gps_longitude: c.gps_longitude || c.lng,
+      // Map status to UI-friendly format
+      status: uiStatus
+    };
+  });
+  
+  // Filter by status with proper mapping
+  const filtered = filt === 'all' ? normalizedComplaints : normalizedComplaints.filter(c => {
+    if (filt === 'Escalated') {
+      // Escalated complaints are high/critical priority in_progress
+      return c.status === 'In Progress' && (c.priority === 'High' || c.priority === 'Critical' || c.priority === 'high' || c.priority === 'critical');
+    }
+    return c.status === filt;
+  });
   const priSort = { Critical: 4, High: 3, Medium: 2, Low: 1 };
   const sorted = [...filtered].sort((a, b) => priSort[b.priority] - priSort[a.priority]);
 
@@ -118,26 +304,50 @@ export default function OfficerDashboard() {
     return { l: 'ON TRACK', c: '#22C55E', p: p * 100 };
   };
 
-  const doUpdate = () => {
+  const doUpdate = async () => {
     if (!newStatus || !sel) return;
-    updateComplaint(sel.id, newStatus, note, CUR_OFFICER.name);
-    setSel(s => s ? { ...s, status: newStatus, updates: [...s.updates, { time: Date.now(), msg: note || `Status → ${newStatus}`, by: CUR_OFFICER.name }] } : null);
-    notify(`${sel.ticketId} → "${newStatus}"`, 'success');
-    setNote(''); setNewStatus('');
+    
+    try {
+      console.log('Updating complaint:', sel.id, 'to status:', newStatus);
+      
+      // Call updateComplaint from context
+      await updateComplaint(sel.id, newStatus, note, user?.name || 'Officer');
+      
+      // Update local selected complaint state
+      setSel(s => s ? { 
+        ...s, 
+        status: newStatus.toLowerCase().replace(/\s+/g, '_'), 
+        updates: [...(s.updates || []), { 
+          time: Date.now(), 
+          msg: note || `Status → ${newStatus}`, 
+          by: user?.name || 'Officer' 
+        }] 
+      } : null);
+      
+      // Reload department complaints to reflect changes
+      await loadDepartmentComplaints();
+      
+      notify(`${sel.ticketId || sel.ticket_id} updated to "${newStatus}"`, 'success');
+      setNote(''); 
+      setNewStatus('');
+    } catch (error) {
+      console.error('Update error:', error);
+      notify('Failed to update complaint: ' + error.message, 'error');
+    }
   };
 
   const stats = {
-    open: mine.filter(c => c.status === 'Open').length,
-    prog: mine.filter(c => c.status === 'In Progress').length,
-    res: mine.filter(c => c.status === 'Resolved').length,
-    esc: mine.filter(c => c.status === 'Escalated').length,
+    open: normalizedComplaints.filter(c => c.status === 'Open').length,
+    prog: normalizedComplaints.filter(c => c.status === 'In Progress' && !(c.priority === 'High' || c.priority === 'Critical' || c.priority === 'high' || c.priority === 'critical')).length,
+    res: normalizedComplaints.filter(c => c.status === 'Resolved').length,
+    esc: normalizedComplaints.filter(c => c.status === 'In Progress' && (c.priority === 'High' || c.priority === 'Critical' || c.priority === 'high' || c.priority === 'critical')).length,
   };
 
-  const dept = DEPARTMENTS.find(d => d.id === CUR_OFFICER.dept);
+  const dept = DEPARTMENTS.find(d => d.id === officerProfile?.department_id) || officerProfile?.departments;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F0F4FA' }}>
-      <TopNav title="Officer Dashboard" sub={`${CUR_OFFICER.name} — ${dept?.name}`} role="officer" />
+    <div className="officer-portal" style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #334155 100%)' }}>
+      <TopNav title="Officer Dashboard" sub={`${user?.name || 'Officer'} — ${dept?.name || 'Department'}`} role="officer" />
 
       {/* View toggle bar */}
       <div style={{ background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -160,7 +370,7 @@ export default function OfficerDashboard() {
       {/* Map view */}
       {activeView === 'map' && (
         <div style={{ padding: '20px 24px', animation: 'fadeUp .3s ease' }}>
-          <LiveMap complaints={mine} filterDept={CUR_OFFICER.dept} height={580} showLegend={true} />
+          <LiveMap complaints={normalizedComplaints} filterDept={officerProfile?.department_id} height={580} showLegend={true} />
         </div>
       )}
 
@@ -185,7 +395,7 @@ export default function OfficerDashboard() {
                 const sla = getSLA(c);
                 const isSel = sel?.id === c.id;
                 return (
-                  <div key={c.id} onClick={() => setSel(c)} style={{ padding: '12px 14px', borderRadius: 10, marginBottom: 7, cursor: 'pointer', border: `1.5px solid ${isSel ? '#8B5CF6' : '#E2E8F0'}`, background: isSel ? '#8B5CF608' : '#fff', transition: 'all .2s', borderLeft: `4px solid ${d?.color || '#E2E8F0'}`, animation: `fadeUp .3s ease ${i * .04}s both` }}>
+                  <div key={c.id} onClick={() => setSel(c)} style={{ padding: '12px 14px', borderRadius: 10, marginBottom: 7, cursor: 'pointer', borderTop: `1.5px solid ${isSel ? '#8B5CF6' : '#E2E8F0'}`, borderRight: `1.5px solid ${isSel ? '#8B5CF6' : '#E2E8F0'}`, borderBottom: `1.5px solid ${isSel ? '#8B5CF6' : '#E2E8F0'}`, borderLeft: `4px solid ${d?.color || '#E2E8F0'}`, background: isSel ? '#8B5CF608' : '#fff', transition: 'all .2s', animation: `fadeUp .3s ease ${i * .04}s both` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
                       <div style={{ fontWeight: 700, fontSize: 12, color: '#1E2845', flex: 1, marginRight: 8, lineHeight: 1.4 }}>{c.title}</div>
                       <StatusBadge s={c.status} />

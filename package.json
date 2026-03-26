@@ -1,46 +1,48 @@
 {
-"name": "nagarvani",
-"version": "1.0.0",
-"private": true,
-"engines": {
-"node": ">=24.0.0"
-},
-"dependencies": {
-"i18next": "^23.7.0",
-"i18next-browser-languagedetector": "^8.2.1",
-"leaflet": "^1.9.4",
-"react": "^18.2.0",
-"react-dom": "^18.2.0",
-"react-i18next": "^13.2.2",
-"react-leaflet": "^4.2.1",
-"react-scripts": "5.0.1",
-"three": "^0.183.2",
-"typescript": "4.9.5"
-},
-"scripts": {
-"start": "react-scripts start",
-"start:https": "HTTPS=true react-scripts start",
-"start:https-win": "set HTTPS=true && react-scripts start",
-"build": "CI=false npx react-scripts build",
-"build:vercel": "CI=false npx react-scripts build",
-"test": "react-scripts test",
-"eject": "react-scripts eject"
-},
-"eslintConfig": {
-"extends": [
-"react-app"
-]
-},
-"browserslist": {
-"production": [
-">0.2%",
-"not dead",
-"not op_mini all"
-],
-"development": [
-"last 1 chrome version",
-"last 1 firefox version",
-"last 1 safari version"
-]
-}
+    "name":  "nagarvani",
+    "version":  "1.0.0",
+    "private":  true,
+    "engines":  {
+                    "node":  "18.x"
+                },
+    "dependencies":  {
+                         "@supabase/supabase-js":  "^2.99.3",
+                         "i18next":  "^23.7.0",
+                         "i18next-browser-languagedetector":  "^8.2.1",
+                         "leaflet":  "^1.9.4",
+                         "react":  "^18.2.0",
+                         "react-dom":  "^18.2.0",
+                         "react-i18next":  "^13.2.2",
+                         "react-leaflet":  "^4.2.1",
+                         "react-router-dom":  "^7.13.1",
+                         "react-scripts":  "5.0.1",
+                         "three":  "^0.183.2",
+                         "typescript":  "4.9.5"
+                     },
+    "scripts":  {
+                    "start":  "react-scripts start",
+                    "start:https":  "HTTPS=true react-scripts start",
+                    "start:https-win":  "set HTTPS=true \u0026\u0026 react-scripts start",
+                    "build":  "CI=false npx react-scripts build",
+                    "build:vercel":  "CI=false npx react-scripts build",
+                    "test":  "react-scripts test",
+                    "eject":  "react-scripts eject"
+                },
+    "eslintConfig":  {
+                         "extends":  [
+                                         "react-app"
+                                     ]
+                     },
+    "browserslist":  {
+                         "production":  [
+                                            "\u003e0.2%",
+                                            "not dead",
+                                            "not op_mini all"
+                                        ],
+                         "development":  [
+                                             "last 1 chrome version",
+                                             "last 1 firefox version",
+                                             "last 1 safari version"
+                                         ]
+                     }
 }

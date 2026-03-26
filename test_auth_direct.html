@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Direct Supabase Auth Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Direct Supabase Auth Test</h1>
+    
+    <div id="status">Testing...</div>
+    
+    <div style="margin-top: 20px;">
+        <h2>Sign Up Test</h2>
+        <input type="email" id="signupEmail" placeholder="Email" value="test@example.com">
+        <input type="password" id="signupPassword" placeholder="Password" value="test123456">
+        <button onclick="testSignUp()">Test Sign Up</button>
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <h2>Sign In Test</h2>
+        <input type="email" id="signinEmail" placeholder="Email" value="test@example.com">
+        <input type="password" id="signinPassword" placeholder="Password" value="test123456">
+        <button onclick="testSignIn()">Test Sign In</button>
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <h2>Check Session</h2>
+        <button onclick="checkSession()">Check Current Session</button>
+    </div>
+    
+    <pre id="result" style="background: #f0f0f0; padding: 10px; margin-top: 20px;"></pre>
+
+    <script>
+        const SUPABASE_URL = 'https://xbukealfzhidcypohdwp.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhidWtlYWxmemhpZGN5cG9oZHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNDk4NDgsImV4cCI6MjA4OTgyNTg0OH0.Dp4CtfokPATur1PJmQmOz0Ix7a1EOqoE1LSzrp6M6qQ';
+        
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        function log(message, data = null) {
+            console.log(message, data);
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent += '\n' + message;
+            if (data) {
+                resultDiv.textContent += '\n' + JSON.stringify(data, null, 2);
+            }
+        }
+        
+        async function testSignUp() {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            
+            log('\n=== TESTING SIGN UP ===');
+            log('Email: ' + email);
+            
+            try {
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            name: 'Test User',
+                            role: 'citizen'
+                        }
+                    }
+                });
+                
+                if (error) {
+                    log('❌ Sign Up Error:', error);
+                } else {
+                    log('✅ Sign Up Success:', data);
+                }
+            } catch (err) {
+                log('❌ Exception:', err);
+            }
+        }
+        
+        async function testSignIn() {
+            const email = document.getElementById('signinEmail').value;
+            const password = document.getElementById('signinPassword').value;
+            
+            log('\n=== TESTING SIGN IN ===');
+            log('Email: ' + email);
+            
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) {
+                    log('❌ Sign In Error:', error);
+                } else {
+                    log('✅ Sign In Success:', data);
+                }
+            } catch (err) {
+                log('❌ Exception:', err);
+            }
+        }
+        
+        async function checkSession() {
+            log('\n=== CHECKING SESSION ===');
+            
+            try {
+                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                
+                if (error) {
+                    log('❌ Session Error:', error);
+                } else if (session) {
+                    log('✅ Active Session:', session);
+                } else {
+                    log('ℹ️ No active session');
+                }
+            } catch (err) {
+                log('❌ Exception:', err);
+            }
+        }
+        
+        // Check initial connection
+        window.onload = async () => {
+            log('=== INITIAL CONNECTION TEST ===');
+            log('Supabase URL: ' + SUPABASE_URL);
+            
+            try {
+                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                if (error) {
+                    log('❌ Connection Error:', error);
+                    document.getElementById('status').textContent = '❌ Connection Failed';
+                } else {
+                    log('✅ Connected to Supabase');
+                    document.getElementById('status').textContent = '✅ Connected';
+                    if (session) {
+                        log('ℹ️ Existing session found:', session.user.email);
+                    }
+                }
+            } catch (err) {
+                log('❌ Exception:', err);
+                document.getElementById('status').textContent = '❌ Exception';
+            }
+        };
+    </script>
+</body>
+</html>

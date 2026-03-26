@@ -1,12 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import GridDistortion from '../components/GridDistortion';
+import NagarVaniLogo from '../components/NagarVaniLogo';
+import AuthModal from '../components/AuthModal';
 
 export default function Landing() {
-  const { setRole, complaints } = useApp();
+  const { setRole, complaints, user, role, signOut } = useApp();
+  const navigate = useNavigate();
   const [hov, setHov] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState('signin');
   const total = complaints.length;
-  const res = complaints.filter(c => c.status === 'Resolved').length;
+  const res = complaints.filter(c => c.status === 'resolved').length;
+
+  // Auto-redirect logged-in users to their portal
+  useEffect(() => {
+    if (user && role && role !== 'landing') {
+      // Redirect to appropriate portal based on role
+      if (role === 'citizen') {
+        navigate('/citizen', { replace: true });
+      } else if (role === 'officer') {
+        navigate('/officer', { replace: true });
+      } else if (role === 'admin') {
+        navigate('/admin', { replace: true });
+      }
+    }
+  }, [user, role, navigate]);
+
+  const handleRoleSelect = (roleId) => {
+    if (!user) {
+      setAuthMode('signin');
+      setShowAuthModal(true);
+      return;
+    }
+    setRole(roleId);
+    navigate(`/${roleId}`);
+  };
+
+  const handleAuthClick = (mode) => {
+    setAuthMode(mode);
+    setShowAuthModal(true);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   const roles = [
     {
@@ -56,6 +96,7 @@ export default function Landing() {
         {/* Header */}
         <div style={{ paddingTop: 32, paddingBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <NagarVaniLogo size={40} />
             <div style={{ background: 'linear-gradient(135deg,#1A3A8F,#0A7EA4)', color: '#fff', padding: '7px 16px', borderRadius: 10, fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 20 }}>
               Nagar<span style={{ color: '#00C2E0' }}>Vani</span>
             </div>
@@ -70,6 +111,63 @@ export default function Landing() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 999, background: '#22C55E20', color: '#22C55E', fontSize: 11, fontWeight: 700 }}>
               <span style={{ width: 6, height: 6, background: '#22C55E', borderRadius: '50%', display: 'inline-block' }} />LIVE
             </div>
+            
+            {/* Auth buttons */}
+            {user ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontSize: 12, color: '#8899BB' }}>
+                  Welcome, {user.name}
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#fff',
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => handleAuthClick('signin')}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#fff',
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => handleAuthClick('signup')}
+                  style={{
+                    background: 'linear-gradient(135deg, #0A7EA4, #00C2E0)',
+                    border: 'none',
+                    color: '#fff',
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Sign Up
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -92,7 +190,7 @@ export default function Landing() {
           {roles.map((r, i) => (
             <div
               key={r.id}
-              onClick={() => setRole(r.id)}
+              onClick={() => handleRoleSelect(r.id)}
               onMouseEnter={() => setHov(r.id)}
               onMouseLeave={() => setHov(null)}
               style={{
@@ -127,6 +225,14 @@ export default function Landing() {
           Built for India's 1.4B citizens • AI + Blockchain powered • NagarVani 2025
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+        defaultMode={authMode}
+      />
+
     </div>
   );
 }

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Database Setup Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        #result {
+            background: white;
+            padding: 15px;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Database Setup Verification</h1>
+    
+    <div class="test-section">
+        <h2>Test All Tables</h2>
+        <button onclick="testAllTables()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Individual Table Tests</h2>
+        <button onclick="testTable('users')">Test Users</button>
+        <button onclick="testTable('departments')">Test Departments</button>
+        <button onclick="testTable('officers')">Test Officers</button>
+        <button onclick="testTable('complaints')">Test Complaints</button>
+        <button onclick="testTable('complaint_updates')">Test Complaint Updates</button>
+        <button onclick="testTable('leaderboard')">Test Leaderboard</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Results</h2>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://xbukealfzhidcypohdwp.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhidWtlYWxmemhpZGN5cG9oZHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNDk4NDgsImV4cCI6MjA4OTgyNTg0OH0.Dp4CtfokPATur1PJmQmOz0Ix7a1EOqoE1LSzrp6M6qQ';
+
+        const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        function log(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            resultDiv.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            console.log(message);
+        }
+
+        function clearResults() {
+            document.getElementById('result').innerHTML = '';
+        }
+
+        async function testTable(tableName) {
+            log(`\n=== Testing ${tableName} table ===`);
+            
+            try {
+                const { data, error, count } = await client
+                    .from(tableName)
+                    .select('*', { count: 'exact', head: false })
+                    .limit(5);
+
+                if (error) {
+                    if (error.message.includes('relation') || error.message.includes('does not exist')) {
+                        log(`❌ Table "${tableName}" does not exist!`, 'error');
+                        log(`   Create it by running supabase_clean_setup.sql`, 'error');
+                    } else if (error.code === 'PGRST116') {
+                        log(`✅ Table "${tableName}" exists but is empty (0 rows)`, 'success');
+                    } else {
+                        log(`❌ Error accessing "${tableName}": ${error.message}`, 'error');
+                        log(`   Code: ${error.code}`, 'error');
+                    }
+                } else {
+                    log(`✅ Table "${tableName}" exists with ${count || 0} rows`, 'success');
+                    if (data && data.length > 0) {
+                        log(`   Sample data: ${JSON.stringify(data[0], null, 2)}`, 'info');
+                    }
+                }
+            } catch (err) {
+                log(`❌ Exception testing "${tableName}": ${err.message}`, 'error');
+            }
+        }
+
+        async function testAllTables() {
+            clearResults();
+            log('=== STARTING FULL DATABASE TEST ===\n');
+            
+            const tables = [
+                'users',
+                'departments', 
+                'officers',
+                'complaints',
+                'complaint_updates',
+                'leaderboard'
+            ];
+
+            for (const table of tables) {
+                await testTable(table);
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            log('\n=== TEST COMPLETE ===');
+            log('\nSummary:');
+            log('- If all tables show ✅, your database is set up correctly!');
+            log('- If any show ❌ "does not exist", run supabase_clean_setup.sql');
+            log('- Empty tables (0 rows) are OK - they will fill as you use the app');
+        }
+
+        // Run tests on page load
+        window.onload = () => {
+            log('Database test tool loaded. Click "Run All Tests" to check your setup.\n');
+        };
+    </script>
+</body>
+</html>

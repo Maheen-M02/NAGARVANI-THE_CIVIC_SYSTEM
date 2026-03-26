@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Supabase 406 Errors</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #1a1a1a;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    button {
+      background: #0ea5e9;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 5px;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #0284c7;
+      transform: translateY(-1px);
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .success {
+      background: #d1fae5;
+      border: 2px solid #10b981;
+      color: #065f46;
+    }
+    .error {
+      background: #fee2e2;
+      border: 2px solid #ef4444;
+      color: #991b1b;
+    }
+    .info {
+      background: #dbeafe;
+      border: 2px solid #3b82f6;
+      color: #1e40af;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f9fafb;
+      border-radius: 8px;
+      border-left: 4px solid #0ea5e9;
+    }
+    .test-section h3 {
+      margin-top: 0;
+      color: #1a1a1a;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    .status.pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .status.running {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .status.success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .status.failed {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Supabase 406 Error Diagnostic Tool</h1>
+    <div class="subtitle">Test direct API calls to diagnose 406 "Not Acceptable" errors</div>
+
+    <div class="test-section">
+      <h3>Test 1: Check Supabase Connection <span id="status1" class="status pending">Pending</span></h3>
+      <button onclick="testConnection()">Run Test</button>
+      <div id="result1"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Test 2: List All Tables <span id="status2" class="status pending">Pending</span></h3>
+      <button onclick="testListTables()">Run Test</button>
+      <div id="result2"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Test 3: Query Users Table <span id="status3" class="status pending">Pending</span></h3>
+      <button onclick="testUsersTable()">Run Test</button>
+      <div id="result3"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Test 4: Query Officers Table <span id="status4" class="status pending">Pending</span></h3>
+      <button onclick="testOfficersTable()">Run Test</button>
+      <div id="result4"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Test 5: Query Departments Table <span id="status5" class="status pending">Pending</span></h3>
+      <button onclick="testDepartmentsTable()">Run Test</button>
+      <div id="result5"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Test 6: Direct REST API Call <span id="status6" class="status pending">Pending</span></h3>
+      <button onclick="testDirectAPI()">Run Test</button>
+      <div id="result6"></div>
+    </div>
+
+    <div style="margin-top: 30px; padding: 20px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
+      <strong>⚠️ Instructions:</strong>
+      <ol style="margin: 10px 0; padding-left: 20px;">
+        <li>Run tests in order from top to bottom</li>
+        <li>Check which tests pass and which fail</li>
+        <li>Look for specific error codes (406, 403, 401, etc.)</li>
+        <li>If all tests fail, check if Supabase project is paused</li>
+        <li>If only some tests fail, check RLS policies for those tables</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://xbukealfzhidcypohdwp.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhidWtlYWxmemhpZGN5cG9oZHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNDk4NDgsImV4cCI6MjA4OTgyNTg0OH0.Dp4CtfokPATur1PJmQmOz0Ix7a1EOqoE1LSzrp6M6qQ';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    function updateStatus(testNum, status) {
+      const statusEl = document.getElementById(`status${testNum}`);
+      statusEl.className = `status ${status}`;
+      statusEl.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+    }
+
+    function showResult(testNum, message, isError = false) {
+      const resultEl = document.getElementById(`result${testNum}`);
+      resultEl.className = `result ${isError ? 'error' : 'success'}`;
+      resultEl.textContent = message;
+    }
+
+    function showInfo(testNum, message) {
+      const resultEl = document.getElementById(`result${testNum}`);
+      resultEl.className = 'result info';
+      resultEl.textContent = message;
+    }
+
+    async function testConnection() {
+      updateStatus(1, 'running');
+      try {
+        const { data, error } = await supabase.from('departments').select('count');
+        
+        if (error) {
+          updateStatus(1, 'failed');
+          showResult(1, `❌ Connection Failed\n\nError: ${error.message}\nCode: ${error.code}\nDetails: ${error.details || 'None'}\nHint: ${error.hint || 'None'}`, true);
+        } else {
+          updateStatus(1, 'success');
+          showResult(1, `✅ Connection Successful!\n\nSupabase is reachable and responding.\nURL: ${SUPABASE_URL}`);
+        }
+      } catch (err) {
+        updateStatus(1, 'failed');
+        showResult(1, `❌ Unexpected Error\n\n${err.message}\n\nStack: ${err.stack}`, true);
+      }
+    }
+
+    async function testListTables() {
+      updateStatus(2, 'running');
+      try {
+        // Try to query each table to see which exist
+        const tables = ['users', 'departments', 'officers', 'complaints', 'leaderboard'];
+        const results = [];
+
+        for (const table of tables) {
+          try {
+            const { error } = await supabase.from(table).select('count', { count: 'exact', head: true });
+            if (error) {
+              results.push(`❌ ${table}: ${error.message}`);
+            } else {
+              results.push(`✅ ${table}: Accessible`);
+            }
+          } catch (err) {
+            results.push(`❌ ${table}: ${err.message}`);
+          }
+        }
+
+        updateStatus(2, 'success');
+        showInfo(2, `Table Access Test:\n\n${results.join('\n')}`);
+      } catch (err) {
+        updateStatus(2, 'failed');
+        showResult(2, `❌ Test Failed\n\n${err.message}`, true);
+      }
+    }
+
+    async function testUsersTable() {
+      updateStatus(3, 'running');
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .limit(1);
+
+        if (error) {
+          updateStatus(3, 'failed');
+          showResult(3, `❌ Query Failed\n\nError: ${error.message}\nCode: ${error.code}\nDetails: ${error.details || 'None'}\nHint: ${error.hint || 'None'}\n\nThis is likely the 406 error!`, true);
+        } else {
+          updateStatus(3, 'success');
+          showResult(3, `✅ Query Successful!\n\nFound ${data.length} row(s)\n\nData:\n${JSON.stringify(data, null, 2)}`);
+        }
+      } catch (err) {
+        updateStatus(3, 'failed');
+        showResult(3, `❌ Unexpected Error\n\n${err.message}`, true);
+      }
+    }
+
+    async function testOfficersTable() {
+      updateStatus(4, 'running');
+      try {
+        const { data, error } = await supabase
+          .from('officers')
+          .select('*')
+          .limit(1);
+
+        if (error) {
+          updateStatus(4, 'failed');
+          showResult(4, `❌ Query Failed\n\nError: ${error.message}\nCode: ${error.code}\nDetails: ${error.details || 'None'}\nHint: ${error.hint || 'None'}\n\nThis is likely the 406 error!`, true);
+        } else {
+          updateStatus(4, 'success');
+          showResult(4, `✅ Query Successful!\n\nFound ${data.length} row(s)\n\nData:\n${JSON.stringify(data, null, 2)}`);
+        }
+      } catch (err) {
+        updateStatus(4, 'failed');
+        showResult(4, `❌ Unexpected Error\n\n${err.message}`, true);
+      }
+    }
+
+    async function testDepartmentsTable() {
+      updateStatus(5, 'running');
+      try {
+        const { data, error } = await supabase
+          .from('departments')
+          .select('*')
+          .limit(5);
+
+        if (error) {
+          updateStatus(5, 'failed');
+          showResult(5, `❌ Query Failed\n\nError: ${error.message}\nCode: ${error.code}`, true);
+        } else {
+          updateStatus(5, 'success');
+          showResult(5, `✅ Query Successful!\n\nFound ${data.length} department(s)\n\nData:\n${JSON.stringify(data, null, 2)}`);
+        }
+      } catch (err) {
+        updateStatus(5, 'failed');
+        showResult(5, `❌ Unexpected Error\n\n${err.message}`, true);
+      }
+    }
+
+    async function testDirectAPI() {
+      updateStatus(6, 'running');
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&limit=1`, {
+          method: 'GET',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+
+        const responseText = await response.text();
+        
+        if (!response.ok) {
+          updateStatus(6, 'failed');
+          showResult(6, `❌ Direct API Call Failed\n\nStatus: ${response.status} ${response.statusText}\nHeaders: ${JSON.stringify(Object.fromEntries(response.headers), null, 2)}\n\nResponse:\n${responseText}`, true);
+        } else {
+          updateStatus(6, 'success');
+          const data = JSON.parse(responseText);
+          showResult(6, `✅ Direct API Call Successful!\n\nStatus: ${response.status}\n\nData:\n${JSON.stringify(data, null, 2)}`);
+        }
+      } catch (err) {
+        updateStatus(6, 'failed');
+        showResult(6, `❌ Fetch Error\n\n${err.message}`, true);
+      }
+    }
+  </script>
+</body>
+</html>

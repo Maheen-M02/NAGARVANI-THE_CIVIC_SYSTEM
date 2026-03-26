@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "NagarVani Mobile",
+    "slug": "nagarvani-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1E2845"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs access to camera to capture civic issues",
+        "NSPhotoLibraryUsageDescription": "This app needs access to photo library to select images"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1E2845",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them with civic complaints.",
+          "cameraPermission": "The app accesses your camera to let you take photos of civic issues."
+        }
+      ]
+    ]
+  }
+}

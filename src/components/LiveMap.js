@@ -72,6 +72,12 @@ export default function LiveMap({ complaints, filterDept, height = 520, showLege
       return c.lat && c.lng;
     });
 
+    console.log('LiveMap: Total complaints:', complaints.length);
+    console.log('LiveMap: Filtered complaints with GPS:', filtered.length);
+    if (filtered.length > 0) {
+      console.log('LiveMap: Sample complaint:', filtered[0]);
+    }
+
     filtered.forEach(c => {
       const dept = DEPARTMENTS.find(d => d.id === c.dept);
       const priColor = PRIORITY_COLORS[c.priority] || '#6B7280';
@@ -79,17 +85,17 @@ export default function LiveMap({ complaints, filterDept, height = 520, showLege
 
       const svgIcon = L.divIcon({
         className: '',
-        html: `<div class="${isCritical ? 'nv-marker-pulse' : ''}" style="position:relative;width:40px;height:40px;">
-          <div style="position:absolute;inset:0;border-radius:50%;background:linear-gradient(135deg, ${priColor}40, ${priColor}20);border:3px solid ${priColor};box-shadow:0 4px 12px rgba(0,0,0,0.3);"></div>
-          <div style="position:absolute;inset:8px;border-radius:50%;background:linear-gradient(135deg, ${dept?.color || priColor}, ${dept?.color || priColor}CC);border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1;">
+        html: `<div class="${isCritical ? 'nv-marker-pulse' : ''}" style="position:relative;width:50px;height:50px;">
+          <div style="position:absolute;inset:0;border-radius:50%;background:linear-gradient(135deg, ${dept?.color || priColor}40, ${dept?.color || priColor}20);border:3px solid ${dept?.color || priColor};box-shadow:0 4px 12px rgba(0,0,0,0.3);"></div>
+          <div style="position:absolute;inset:6px;border-radius:50%;background:linear-gradient(135deg, ${dept?.color || priColor}, ${dept?.color || priColor}DD);border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:20px;line-height:1;">
             ${dept?.icon || '📍'}
           </div>
-          ${isCritical ? `<div style="position:absolute;top:-2px;right:-2px;width:16px;height:16px;background:linear-gradient(135deg, #EF4444, #DC2626);border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(239,68,68,0.4);animation:pulse 2s ease infinite;"></div>` : ''}
-          <div style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:20px;height:8px;background:rgba(0,0,0,0.2);border-radius:50%;filter:blur(2px);"></div>
+          ${isCritical ? `<div style="position:absolute;top:-4px;right:-4px;width:18px;height:18px;background:linear-gradient(135deg, #EF4444, #DC2626);border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(239,68,68,0.4);animation:pulse 2s ease infinite;"></div>` : ''}
+          <div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);width:24px;height:10px;background:rgba(0,0,0,0.25);border-radius:50%;filter:blur(3px);"></div>
         </div>`,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-        popupAnchor: [0, -25],
+        iconSize: [50, 50],
+        iconAnchor: [25, 25],
+        popupAnchor: [0, -30],
       });
 
       const marker = L.marker([c.lat, c.lng], { icon: svgIcon });
@@ -99,7 +105,7 @@ export default function LiveMap({ complaints, filterDept, height = 520, showLege
       const slaColor = slaPct > 90 ? '#EF4444' : slaPct > 70 ? '#F97316' : '#22C55E';
 
       const popupHtml = `
-        <div style="font-family:'DM Sans',sans-serif;width:280px;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+        <div style="font-family:'DM Sans',sans-serif;width:300px;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
           <div style="background:linear-gradient(135deg, ${dept?.color || '#1A3A8F'}, ${dept?.color || '#1A3A8F'}DD);padding:16px 18px;position:relative;">
             <div style="position:absolute;top:0;right:0;width:60px;height:60px;background:rgba(255,255,255,0.1);border-radius:50%;transform:translate(20px,-20px);"></div>
             <div style="position:relative;z-index:1;">
@@ -111,6 +117,12 @@ export default function LiveMap({ complaints, filterDept, height = 520, showLege
               </div>
             </div>
           </div>
+          ${c.imageUrl || c.image_url ? `
+          <div style="position:relative;height:180px;overflow:hidden;background:#f1f5f9;">
+            <img src="${c.imageUrl || c.image_url}" alt="Complaint" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.style.display='none'" />
+            <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:white;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;backdrop-filter:blur(10px);">📷 Evidence</div>
+          </div>
+          ` : ''}
           <div style="padding:16px 18px;background:linear-gradient(135deg, #fff, #f8fafc);">
             <div style="font-size:12px;color:#64748B;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
               <span style="font-size:14px;">📍</span> ${c.location}
@@ -144,6 +156,9 @@ export default function LiveMap({ complaints, filterDept, height = 520, showLege
     if (filtered.length > 0) {
       const bounds = L.latLngBounds(filtered.map(c => [c.lat, c.lng]));
       leafletMap.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 8 });
+    } else {
+      // Reset to India view if no complaints
+      leafletMap.current.setView([20.5937, 78.9629], 5);
     }
   }, [complaints, activeDept, activeStatus]);
 
@@ -200,8 +215,19 @@ export default function LiveMap({ complaints, filterDept, height = 520, showLege
       </div>
 
       {/* Map container */}
-      <div className="map-panel" style={{ borderRadius: '0 0 14px 14px', borderTop: 'none' }}>
+      <div className="map-panel" style={{ borderRadius: '0 0 14px 14px', borderTop: 'none', position: 'relative' }}>
         <div ref={mapRef} style={{ height, width: '100%' }} />
+
+        {/* No complaints overlay */}
+        {visibleCount === 0 && (
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1000, textAlign: 'center', background: 'rgba(255,255,255,0.95)', padding: '2rem 3rem', borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🗺️</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1E2845', marginBottom: '0.5rem' }}>No Complaints to Display</div>
+            <div style={{ fontSize: '0.875rem', color: '#64748B' }}>
+              {complaints.length === 0 ? 'No complaints have been filed yet' : 'Try adjusting the filters or check if complaints have GPS coordinates'}
+            </div>
+          </div>
+        )}
 
         {/* Priority legend */}
         {showLegend && (

@@ -1,0 +1,30 @@
+# Ignore local development files
+.env
+.env.local
+*.pyc
+__pycache__/
+.pytest_cache/
+.coverage
+.vscode/
+.idea/
+
+# Ignore test files
+test_*.py
+*_test.py
+
+# Ignore documentation
+*.md
+!README.md
+
+# Ignore web app files
+src/
+public/
+node_modules/
+package*.json
+build/
+NagarvaniExpo/
+
+# Ignore local images
+*.jpg
+*.png
+*.gif
