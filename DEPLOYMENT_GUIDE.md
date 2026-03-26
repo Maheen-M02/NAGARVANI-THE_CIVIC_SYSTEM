@@ -52,75 +52,163 @@ Go to `https://github.com/YOUR_USERNAME/nagarvani` and confirm all files are the
 
 ---
 
-## PHASE 2: Deploy CLIP AI Server to Railway
+## PHASE 2: Deploy CLIP AI Server (Free Options)
 
-The CLIP server is a Python FastAPI app that runs the AI image classification model.
+Railway trial ended? No problem. Use one of these free alternatives:
 
-### Step 2.1 — Sign Up / Log In to Railway
+---
 
-1. Go to https://railway.app
-2. Click **Login** → **Login with GitHub**
-3. Authorize Railway to access your GitHub
+### OPTION A: Hugging Face Spaces (RECOMMENDED - 100% Free Forever)
 
-### Step 2.2 — Create New Project
+Hugging Face is purpose-built for ML models like CLIP. Free, no credit card, no time limits.
 
-1. Click **New Project**
-2. Select **Deploy from GitHub repo**
-3. Find and select your `nagarvani` repository
-4. Click **Deploy Now**
+#### Step 2A.1 — Create Hugging Face Account
+1. Go to https://huggingface.co/join
+2. Sign up with email or GitHub
 
-### Step 2.3 — Configure the Service
+#### Step 2A.2 — Create a New Space
+1. Go to https://huggingface.co/new-space
+2. Fill in:
+   - **Space name:** `nagarvani-clip`
+   - **License:** MIT
+   - **SDK:** Docker
+   - **Visibility:** Public
+3. Click **Create Space**
 
-Railway will try to deploy the whole repo. We need to point it to the Python server:
+#### Step 2A.3 — Upload the CLIP Server Files
 
-1. After the project is created, click on the service card
-2. Go to **Settings** tab
-3. Under **Root Directory** — leave empty (root of repo)
-4. Under **Build Command** — leave empty (Railway auto-detects Python)
-5. Under **Start Command** — set to:
-   ```
-   uvicorn clip_server:app --host 0.0.0.0 --port $PORT
-   ```
-6. Click **Save**
+You need to upload 3 files from the `hf_space/` folder in your project:
 
-### Step 2.4 — Add Environment Variables (optional)
-
-No environment variables are required for the CLIP server. Skip this step.
-
-### Step 2.5 — Generate a Public Domain
-
-1. Go to **Settings** → **Networking**
-2. Click **Generate Domain**
-3. You'll get a URL like: `https://nagarvani-production.railway.app`
-4. **Copy this URL** — you'll need it in Phase 3
-
-### Step 2.6 — Wait for Deployment
-
-1. Go to the **Deployments** tab
-2. Watch the build logs
-3. First deploy takes 5-15 minutes (downloads PyTorch ~2GB)
-4. Status will show **Active** when done
-
-### Step 2.7 — Test the CLIP Server
-
-Open your browser and visit:
+**File 1: README.md**
 ```
-https://YOUR-RAILWAY-URL.railway.app/health
+---
+title: NagarVani CLIP API
+emoji: 🏙️
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+---
 ```
 
-You should see:
-```json
-{
-  "status": "healthy",
-  "model_loaded": true,
-  "mode": "CLIP"
-}
+**File 2: requirements.txt**
+```
+fastapi
+uvicorn
+transformers
+torch
+torchvision
+Pillow
+python-multipart
 ```
 
-If `model_loaded` is `false`, the server is running in fallback mode (still works, just uses smart classification instead of real CLIP).
+**File 3: Dockerfile**
+```dockerfile
+FROM python:3.10-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY app.py .
+EXPOSE 7860
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
+```
 
-> **Railway Free Tier Note:** Free tier gives 500 hours/month. The CLIP model needs ~2GB RAM.
-> If you hit limits, upgrade to Hobby plan ($5/month) at https://railway.app/account/billing
+**File 4: app.py** — copy the contents of `hf_space/app.py` from your project
+
+To upload:
+1. In your Space, click **Files** tab
+2. Click **Add file** → **Upload files**
+3. Upload all 4 files
+4. Click **Commit changes**
+
+#### Step 2A.4 — Wait for Build
+1. Click the **App** tab
+2. Watch the build logs (5-10 minutes first time)
+3. When done, you'll see: `{"status": "running", "model_loaded": true}`
+
+#### Step 2A.5 — Get Your API URL
+
+Your CLIP API URL will be:
+```
+https://YOUR-USERNAME-nagarvani-clip.hf.space
+```
+
+Test it:
+```
+https://YOUR-USERNAME-nagarvani-clip.hf.space/health
+```
+
+---
+
+### OPTION B: Render (Free Tier)
+
+#### Step 2B.1 — Sign Up
+1. Go to https://render.com
+2. Sign up with GitHub
+
+#### Step 2B.2 — Create Web Service
+1. Click **New** → **Web Service**
+2. Connect your GitHub repo `nagarvani`
+3. Configure:
+   - **Name:** nagarvani-clip
+   - **Runtime:** Python 3
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `uvicorn clip_server:app --host 0.0.0.0 --port $PORT`
+   - **Plan:** Free
+4. Click **Create Web Service**
+
+#### Step 2B.3 — Get Your URL
+After deploy, your URL will be:
+```
+https://nagarvani-clip.onrender.com
+```
+
+> Note: Free tier sleeps after 15 minutes of inactivity. First request after sleep takes ~30 seconds to wake up.
+
+---
+
+### OPTION C: Google Colab (Temporary - for demos only)
+
+If you just need it running for a demo:
+
+1. Open https://colab.research.google.com
+2. Create new notebook
+3. Run this cell:
+```python
+!pip install fastapi uvicorn transformers torch pillow python-multipart pyngrok -q
+
+# Upload your clip_server.py file, then:
+from pyngrok import ngrok
+import subprocess, threading
+
+def run():
+    subprocess.run(["uvicorn", "clip_server:app", "--host", "0.0.0.0", "--port", "8000"])
+
+threading.Thread(target=run, daemon=True).start()
+
+import time; time.sleep(3)
+tunnel = ngrok.connect(8000)
+print("CLIP API URL:", tunnel.public_url)
+```
+4. Copy the ngrok URL and use it as `REACT_APP_CLIP_API_URL`
+
+> This only works while the Colab tab is open.
+
+---
+
+### Which Option to Choose?
+
+| Option | Cost | Uptime | Speed | Best For |
+|---|---|---|---|---|
+| Hugging Face Spaces | Free forever | 24/7 | Fast | Production |
+| Render | Free (sleeps) | Sleeps | Slow cold start | Testing |
+| Google Colab | Free | Session only | Fast | Demo only |
+
+**Recommendation: Use Hugging Face Spaces (Option A)**
+
+---
+
+## PHASE 3: Deploy React App to Vercel
 
 ---
 
@@ -158,7 +246,7 @@ This is the most important step. Click **Environment Variables** and add:
 |---|---|
 | `REACT_APP_SUPABASE_URL` | `https://xbukealfzhidcypohdwp.supabase.co` |
 | `REACT_APP_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhidWtlYWxmemhpZGN5cG9oZHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNDk4NDgsImV4cCI6MjA4OTgyNTg0OH0.Dp4CtfokPATur1PJmQmOz0Ix7a1EOqoE1LSzrp6M6qQ` |
-| `REACT_APP_CLIP_API_URL` | `https://YOUR-RAILWAY-URL.railway.app` |
+| `REACT_APP_CLIP_API_URL` | `https://YOUR-USERNAME-nagarvani-clip.hf.space` (from Phase 2) |
 
 > Replace `YOUR-RAILWAY-URL` with the actual Railway URL from Step 2.5
 

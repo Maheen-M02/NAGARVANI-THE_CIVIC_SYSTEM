@@ -1,16 +1,9 @@
-# Railway Deployment Requirements - Minimal set for CLIP API
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 transformers==4.35.2
-torch==2.1.1
-torchvision==0.16.1
+torch
+torchvision
 Pillow==10.1.0
 pillow-avif-plugin==1.4.3
 python-multipart==0.0.6
-
-# Additional dependencies for Railway
-numpy==1.24.3
-absl-py==2.4.0
-grpcio==1.78.0
-six==1.17.0
-protobuf==3.20.3
+numpy
