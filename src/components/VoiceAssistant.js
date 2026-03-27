@@ -53,8 +53,11 @@ export default function VoiceAssistant({ onComplaintCreated }) {
         break;
       }
       case 'error':
-        addMessage('system', `⚠️ ${event.error?.message || 'Connection error'}`);
-        setState('ended');
+        addMessage('system', `⚠️ ${event.error?.message || 'Connection error'} — switching to demo mode`);
+        // Don't end the call on error if demo mode kicks in
+        if (!event.error?.message?.includes('demo')) {
+          setState('ended');
+        }
         break;
       default:
         break;

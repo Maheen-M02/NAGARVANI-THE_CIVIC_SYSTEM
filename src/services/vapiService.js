@@ -122,12 +122,34 @@ class VapiService {
       vapi.on('speech-start', () => onEvent({ type: 'speech-start' }));
       vapi.on('speech-end', () => onEvent({ type: 'speech-end' }));
       vapi.on('message', (msg) => onEvent({ type: 'message', data: msg }));
-      vapi.on('error', (err) => onEvent({ type: 'error', error: err }));
+      vapi.on('error', (err) => {
+        console.error('Vapi error:', err);
+        onEvent({ type: 'error', error: err });
+      });
 
-      await vapi.start(VAPI_ASSISTANT_ID || VAPI_ASSISTANT_CONFIG);
+      // Use assistant ID if available, otherwise use inline config
+      // NOTE: inline config requires a valid Vapi account with model access
+      if (VAPI_ASSISTANT_ID) {
+        await vapi.start(VAPI_ASSISTANT_ID);
+      } else {
+        // Inline config - requires your Vapi account to have GPT-4 access
+        await vapi.start({
+          name: VAPI_ASSISTANT_CONFIG.name,
+          firstMessage: VAPI_ASSISTANT_CONFIG.firstMessage,
+          model: VAPI_ASSISTANT_CONFIG.model,
+          voice: VAPI_ASSISTANT_CONFIG.voice,
+          tools: VAPI_ASSISTANT_CONFIG.tools,
+          endCallMessage: VAPI_ASSISTANT_CONFIG.endCallMessage,
+          endCallPhrases: VAPI_ASSISTANT_CONFIG.endCallPhrases,
+        });
+      }
+
       return { success: true, mode: 'live' };
     } catch (err) {
       console.error('Vapi start error:', err);
+      // "Meeting has ended" = Vapi connected but session ended immediately
+      // Fall back to demo mode
+      onEvent({ type: 'error', error: { message: err.message || 'Call ended unexpectedly. Running demo mode.' } });
       return this.startDemoCall(onEvent);
     }
   }
