@@ -129,17 +129,44 @@ function FileScreen({ user, onBack, onSuccess, notify, submitComplaint, departme
     try {
       const ms = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment' } });
       setStream(ms);
-      if (videoRef.current) { videoRef.current.srcObject = ms; setPhotoMode(true); }
-    } catch(e) { notify('Camera access failed', 'error'); }
+      setPhotoMode(true); // render video element first
+    } catch(e) {
+      console.error('Camera error:', e);
+      notify('Camera access failed. Please allow camera permission.', 'error');
+    }
   };
+
+  // Attach stream to video element after it renders
+  React.useEffect(() => {
+    if (photoMode && stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [photoMode, stream]);
 
   const stopCamera = () => { stream?.getTracks().forEach(t => t.stop()); setStream(null); setPhotoMode(false); };
 
   const capturePhoto = () => {
-    const v = videoRef.current, c = canvasRef.current, ctx = c.getContext('2d');
-    c.width = v.videoWidth; c.height = v.videoHeight;
-    ctx.drawImage(v, 0, 0);
-    c.toBlob(blob => { const file = new File([blob],'issue.jpg',{type:'image/jpeg'}); f('photo',file); stopCamera(); analyzePhoto(file); }, 'image/jpeg', 0.8);
+    const v = videoRef.current;
+    const c = canvasRef.current;
+    if (!v || !c) { notify('Camera not ready', 'error'); return; }
+
+    // Wait for video to have dimensions
+    const width = v.videoWidth || v.clientWidth || 640;
+    const height = v.videoHeight || v.clientHeight || 480;
+
+    c.width = width;
+    c.height = height;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(v, 0, 0, width, height);
+
+    c.toBlob(blob => {
+      if (!blob) { notify('Failed to capture photo', 'error'); return; }
+      const file = new File([blob], 'issue.jpg', { type:'image/jpeg' });
+      f('photo', file);
+      stopCamera();
+      analyzePhoto(file);
+    }, 'image/jpeg', 0.85);
   };
 
   const analyzePhoto = async (photo) => {
@@ -167,6 +194,9 @@ function FileScreen({ user, onBack, onSuccess, notify, submitComplaint, departme
 
   return (
     <div style={{ paddingBottom:80 }}>
+      {/* Hidden canvas - always mounted for photo capture */}
+      <canvas ref={canvasRef} style={{ display:'none' }} />
+
       {/* Back header */}
       <div style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px 8px' }}>
         <button onClick={onBack} style={{ background:'#f1f5f9', border:'none', borderRadius:12, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:18 }}>←</button>
@@ -234,8 +264,7 @@ function FileScreen({ user, onBack, onSuccess, notify, submitComplaint, departme
               )}
               {photoMode && (
                 <div>
-                  <video ref={videoRef} autoPlay playsInline style={{ width:'100%', borderRadius:12, maxHeight:260, objectFit:'cover' }} />
-                  <canvas ref={canvasRef} style={{ display:'none' }} />
+                  <video ref={videoRef} autoPlay playsInline muted style={{ width:'100%', borderRadius:12, maxHeight:260, objectFit:'cover', display:'block' }} />
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginTop:10 }}>
                     <button onClick={capturePhoto} style={{ padding:14, borderRadius:12, background:'#22c55e', color:'#fff', border:'none', cursor:'pointer', fontWeight:700 }}>📸 Capture</button>
                     <button onClick={stopCamera} style={{ padding:14, borderRadius:12, background:'#f1f5f9', border:'none', cursor:'pointer', fontWeight:700 }}>✕ Cancel</button>
