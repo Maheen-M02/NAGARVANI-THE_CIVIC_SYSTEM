@@ -5,6 +5,7 @@ import { StatusBadge } from './UI';
 import { DEPARTMENTS } from '../data/constants';
 import locationService from '../services/locationService';
 import { aiTriage, aiImageClassification } from '../data/aiTriage';
+import VoiceAssistant from './VoiceAssistant';
 
 // ── Status colour helper ──────────────────────────────────────
 function statusColor(s) {
@@ -30,7 +31,7 @@ function HomeScreen({ user, complaints, onNavigate, signOut }) {
     { icon:'📝', label:'File Complaint', sub:'Report an issue', color:'#eff6ff', iconBg:'#1e3a8a', view:'file' },
     { icon:'📸', label:'Snap & Report', sub:'Take a photo', color:'#f0fdf4', iconBg:'#16a34a', view:'snap' },
     { icon:'🔍', label:'Track Status', sub:'Check your ticket', color:'#fef3c7', iconBg:'#d97706', view:'track' },
-    { icon:'🏆', label:'Leaderboard', sub:'Your rank', color:'#fdf4ff', iconBg:'#7c3aed', view:'leaderboard' },
+    { icon:'📞', label:'Call & Report', sub:'Voice complaint', color:'#fdf4ff', iconBg:'#7c3aed', view:'voice' },
   ];
 
   return (
@@ -493,6 +494,22 @@ export default function MobileCitizenApp() {
         {screen === 'snap' && <FileScreen user={user} onBack={() => setScreen('home')} onSuccess={handleSuccess} notify={notify} submitComplaint={submitComplaint} departments={departments} />}
         {screen === 'track' && <TrackScreen onBack={() => setScreen('home')} complaints={complaints} supabaseService={supabaseService} user={user} notify={notify} initialTicketId={initialTicketId} />}
         {screen === 'success' && <SuccessScreen ticket={ticket} onHome={() => setScreen('home')} onTrack={() => { setInitialTicketId(ticket?.ticket_id||ticket?.ticketId||''); setScreen('track'); }} />}
+        {screen === 'voice' && (
+          <div style={{ paddingBottom: 80 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px 16px' }}>
+              <button onClick={() => setScreen('home')} style={{ background:'#f1f5f9', border:'none', borderRadius:12, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:18 }}>←</button>
+              <div style={{ fontFamily:'Syne,sans-serif', fontSize:17, fontWeight:700, color:'#1e2845' }}>Voice Complaint</div>
+            </div>
+            <div style={{ padding:'0 12px' }}>
+              <div style={{ background:'#fff', borderRadius:20, padding:20, boxShadow:'0 2px 12px rgba(0,0,0,0.06)', marginBottom:12 }}>
+                <div style={{ fontSize:14, color:'#64748b', marginBottom:16, lineHeight:1.6 }}>
+                  📞 Call our AI assistant and report your civic issue by voice. Available in English and Hindi.
+                </div>
+                <VoiceAssistant onComplaintCreated={(c) => { notify(`Voice complaint registered! Ticket: ${c.ticket_id}`, 'success'); setScreen('home'); }} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom Tab Bar */}

@@ -7,6 +7,7 @@ import { DEPARTMENTS, OFFICERS } from '../data/constants';
 import NagarVaniLogo from '../components/NagarVaniLogo';
 import locationService from '../services/locationService';
 import AuditTrail from '../components/AuditTrail';
+import VoiceAssistant from '../components/VoiceAssistant';
 import MobileCitizenApp from '../components/MobileCitizenApp';
 import '../styles/leaderboard.css';
 import '../styles/government-portal.css';
@@ -544,8 +545,26 @@ export default function CitizenPortal() {
                   View Rankings
                 </button>
               </div>
+            </div>
 
-              {/* Volunteer Dashboard Card - Only show if user is a volunteer */}
+            {/* Voice Assistant Card */}
+            <div className="gov-card" style={{ marginBottom: '2rem', marginTop: '1.5rem' }}>
+              <div className="gov-card-header">
+                <h3 className="gov-card-title">
+                  <div className="gov-card-icon">📞</div>
+                  Voice Complaint — Call to Report
+                </h3>
+              </div>
+              <div className="gov-card-body">
+                <p style={{ fontSize: '0.875rem', color: 'var(--gov-text-light)', marginBottom: '1.25rem' }}>
+                  Can't type? Just call our AI assistant and report your issue by voice. Available in English and Hindi.
+                </p>
+                <VoiceAssistant onComplaintCreated={(c) => notify(`Voice complaint registered! Ticket: ${c.ticket_id}`, 'success')} />
+              </div>
+            </div>
+
+            {/* Volunteer Dashboard Card */}
+            <div className="gov-services-grid" style={{ marginTop: 0 }}>
               {volunteerProfile && (
                 <div className="gov-service-card" onClick={() => navigate('/volunteer')} style={{ 
                   background: 'linear-gradient(135deg, #8B5CF615 0%, #6366F115 100%)',
