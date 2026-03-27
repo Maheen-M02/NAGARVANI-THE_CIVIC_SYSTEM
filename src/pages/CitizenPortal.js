@@ -7,6 +7,7 @@ import { DEPARTMENTS, OFFICERS } from '../data/constants';
 import NagarVaniLogo from '../components/NagarVaniLogo';
 import locationService from '../services/locationService';
 import AuditTrail from '../components/AuditTrail';
+import MobileCitizenApp from '../components/MobileCitizenApp';
 import '../styles/leaderboard.css';
 import '../styles/government-portal.css';
 
@@ -442,6 +443,11 @@ export default function CitizenPortal() {
       notify('Error tracking complaint. Please try again.', 'error');
     }
   };
+
+  // Render mobile app UI on small screens
+  if (window.innerWidth <= 768) {
+    return <MobileCitizenApp />;
+  }
 
   return (
     <div className="gov-portal">
