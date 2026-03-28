@@ -24,7 +24,7 @@ function statusLabel(s) {
 }
 
 // ── Home Screen ───────────────────────────────────────────────
-function HomeScreen({ user, complaints, onNavigate, signOut, t }) {
+function HomeScreen({ user, complaints, onNavigate, signOut, t, volunteerProfile, onVolunteer, onBecomeVolunteer }) {
   const total = complaints.length;
   const resolved = complaints.filter(c => ['Resolved','resolved','closed'].includes(c.status)).length;
   const open = complaints.filter(c => ['Open','pending','acknowledged'].includes(c.status)).length;
@@ -67,6 +67,34 @@ function HomeScreen({ user, complaints, onNavigate, signOut, t }) {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Volunteer Section */}
+      <div style={{ padding:'0 12px', marginBottom:20 }}>
+        {volunteerProfile ? (
+          <button onClick={onVolunteer}
+            style={{ width:'100%', background:'linear-gradient(135deg,#8B5CF610,#6366F110)', border:'2px solid #8B5CF6', borderRadius:20, padding:'18px 16px', display:'flex', alignItems:'center', gap:14, cursor:'pointer', position:'relative', WebkitTapHighlightColor:'transparent' }}>
+            <div style={{ width:52, height:52, borderRadius:16, background:'linear-gradient(135deg,#8B5CF6,#6366F1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, flexShrink:0, boxShadow:'0 4px 12px rgba(139,92,246,0.3)' }}>🤝</div>
+            <div style={{ flex:1, textAlign:'left' }}>
+              <div style={{ fontFamily:'Syne,sans-serif', fontSize:15, fontWeight:700, color:'#8B5CF6', marginBottom:2 }}>{t('citizen.volunteerDashboard')}</div>
+              <div style={{ fontSize:12, color:'#64748b' }}>{t('citizen.volunteerDashDesc')}</div>
+            </div>
+            {volunteerProfile.is_available && (
+              <div style={{ background:'#22C55E', color:'#fff', padding:'4px 10px', borderRadius:999, fontSize:10, fontWeight:700, position:'absolute', top:10, right:10 }}>✅ {t('citizen.availableBadge')}</div>
+            )}
+            <div style={{ fontSize:18, color:'#8B5CF6', flexShrink:0 }}>→</div>
+          </button>
+        ) : (
+          <button onClick={onBecomeVolunteer}
+            style={{ width:'100%', background:'linear-gradient(135deg,#8B5CF608,#6366F108)', border:'2px dashed #8B5CF6', borderRadius:20, padding:'18px 16px', display:'flex', alignItems:'center', gap:14, cursor:'pointer', WebkitTapHighlightColor:'transparent' }}>
+            <div style={{ width:52, height:52, borderRadius:16, background:'linear-gradient(135deg,#8B5CF6,#6366F1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, flexShrink:0, boxShadow:'0 4px 12px rgba(139,92,246,0.3)' }}>🤝</div>
+            <div style={{ flex:1, textAlign:'left' }}>
+              <div style={{ fontFamily:'Syne,sans-serif', fontSize:15, fontWeight:700, color:'#8B5CF6', marginBottom:2 }}>{t('citizen.becomeVolunteer')}</div>
+              <div style={{ fontSize:12, color:'#64748b' }}>{t('citizen.volunteerDashDesc')}</div>
+            </div>
+            <div style={{ fontSize:18, color:'#8B5CF6', flexShrink:0 }}>→</div>
+          </button>
+        )}
       </div>
 
       {/* Recent Activity */}
@@ -454,6 +482,56 @@ export default function MobileCitizenApp() {
   const [screen, setScreen] = useState('home');
   const [ticket, setTicket] = useState(null);
   const [initialTicketId, setInitialTicketId] = useState('');
+  const [volunteerProfile, setVolunteerProfile] = useState(null);
+
+  // Load volunteer profile
+  React.useEffect(() => {
+    const loadProfile = async () => {
+      if (user) {
+        try {
+          const profile = await supabaseService.getVolunteerProfile(user.id);
+          setVolunteerProfile(profile);
+        } catch (e) {
+          console.error('Error loading volunteer profile:', e);
+        }
+      }
+    };
+    loadProfile();
+  }, [user, supabaseService]);
+
+  const handleBecomeVolunteer = async () => {
+    try {
+      const existingProfile = await supabaseService.getVolunteerProfile(user.id);
+      if (existingProfile) {
+        setVolunteerProfile(existingProfile);
+        notify('Volunteer profile loaded! 🎉', 'success');
+        return;
+      }
+      notify('Creating volunteer profile...', 'success');
+      const locationModule = await import('../services/locationService');
+      const locationResult = await locationModule.default.getCurrentLocation();
+      await supabaseService.createVolunteerProfile(user.id, {
+        name: user.name,
+        phone: user.phone || '',
+        role: 'citizen',
+        lat: locationResult.success ? locationResult.location.latitude : null,
+        lng: locationResult.success ? locationResult.location.longitude : null,
+        location_address: locationResult.success ? locationResult.location.address : null
+      });
+      const profile = await supabaseService.getVolunteerProfile(user.id);
+      setVolunteerProfile(profile);
+      notify('Volunteer profile created! 🎉', 'success');
+    } catch (error) {
+      console.error('Volunteer error:', error);
+      if (error.message?.includes('duplicate') || error.message?.includes('409')) {
+        try {
+          const profile = await supabaseService.getVolunteerProfile(user.id);
+          if (profile) { setVolunteerProfile(profile); notify('Volunteer profile loaded! 🎉', 'success'); return; }
+        } catch (e) {}
+      }
+      notify('Failed to enable volunteer mode. Please try again.', 'error');
+    }
+  };
 
   const goTo = (s, data) => {
     if (s === 'leaderboard') { navigate('/leaderboard'); return; }
@@ -493,7 +571,7 @@ export default function MobileCitizenApp() {
 
       {/* Page content */}
       <div style={{ paddingTop:56 }}>
-        {screen === 'home' && <HomeScreen user={user} complaints={complaints} onNavigate={goTo} signOut={signOut} t={t} />}
+        {screen === 'home' && <HomeScreen user={user} complaints={complaints} onNavigate={goTo} signOut={signOut} t={t} volunteerProfile={volunteerProfile} onVolunteer={() => navigate('/volunteer')} onBecomeVolunteer={handleBecomeVolunteer} />}
         {screen === 'file' && <FileScreen user={user} onBack={() => setScreen('home')} onSuccess={handleSuccess} notify={notify} submitComplaint={submitComplaint} departments={departments} />}
         {screen === 'snap' && <FileScreen user={user} onBack={() => setScreen('home')} onSuccess={handleSuccess} notify={notify} submitComplaint={submitComplaint} departments={departments} />}
         {screen === 'track' && <TrackScreen onBack={() => setScreen('home')} complaints={complaints} supabaseService={supabaseService} user={user} notify={notify} initialTicketId={initialTicketId} />}
