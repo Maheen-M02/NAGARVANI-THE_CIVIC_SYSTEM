@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { useTranslation } from 'react-i18next';
 import { aiTriage, aiImageClassification } from '../data/aiTriage';
 import { StatusBadge, PrioBadge, Spinner, timeAgo } from '../components/UI';
 import { DEPARTMENTS, OFFICERS } from '../data/constants';
 import NagarVaniLogo from '../components/NagarVaniLogo';
+import LanguageSelector from '../components/LanguageSelector';
 import locationService from '../services/locationService';
 import AuditTrail from '../components/AuditTrail';
 import VoiceAssistant from '../components/VoiceAssistant';
@@ -184,6 +186,7 @@ function TrackView({ c }) {
 
 export default function CitizenPortal() {
   const { submitComplaint, notify, complaints, user, signOut, supabaseService, refreshComplaints } = useApp();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [view, setView] = useState('home');
@@ -458,9 +461,9 @@ export default function CitizenPortal() {
           <div className="gov-emblem">
             <NagarVaniLogo size={80} />
             <div>
-              <h1 className="gov-title">NagarVani</h1>
-              <p className="gov-subtitle">Government of India - Digital Citizen Services</p>
-              <p className="gov-tagline">"Voice of the City" - Empowering Civic Participation</p>
+              <h1 className="gov-title">{t('citizen.govTitle')}</h1>
+              <p className="gov-subtitle">{t('citizen.govSubtitle')}</p>
+              <p className="gov-tagline">{t('citizen.govTagline')}</p>
             </div>
           </div>
         </div>
@@ -471,17 +474,18 @@ export default function CitizenPortal() {
         <div className="gov-nav-content">
           <div className="gov-nav-brand">
             <NagarVaniLogo size={32} />
-            Citizen Portal
+            {t('citizen.portalTitle')}
           </div>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <LanguageSelector />
             <button onClick={() => navigateToView('leaderboard')} className="gov-btn gov-btn-secondary">
-              🏆 Leaderboard
+              {t('citizen.leaderboardBtn')}
             </button>
             <button onClick={() => navigate('/')} className="gov-btn gov-btn-outline">
-              🏠 Home
+              {t('citizen.homeBtn')}
             </button>
             <div style={{ fontSize: '0.875rem', color: 'var(--gov-text-light)', marginRight: '0.5rem' }}>
-              Welcome, {user?.name || 'Citizen'}
+              {t('nav.welcome')}, {user?.name || 'Citizen'}
             </div>
             <button 
               onClick={async () => {
@@ -491,7 +495,7 @@ export default function CitizenPortal() {
               className="gov-btn gov-btn-outline"
               style={{ color: '#dc2626', borderColor: '#dc2626' }}
             >
-              🚪 Sign Out
+              {t('citizen.signOutBtn')}
             </button>
           </div>
         </div>
@@ -504,45 +508,45 @@ export default function CitizenPortal() {
             <div className="gov-services-grid">
               <div className="gov-service-card" onClick={() => { navigateToView('file'); setStep(1); }}>
                 <div className="gov-service-icon">📝</div>
-                <h3 className="gov-service-title">File Complaint</h3>
+                <h3 className="gov-service-title">{t('citizen.fileComplaint')}</h3>
                 <p className="gov-service-description">
-                  Submit civic complaints through our secure digital platform
+                  {t('citizen.fileComplaintDesc')}
                 </p>
                 <button className="gov-btn gov-btn-primary gov-btn-lg">
-                  File New Complaint
+                  {t('citizen.fileNewComplaint')}
                 </button>
               </div>
 
               <div className="gov-service-card" onClick={() => { navigateToView('file'); setStep(2); startCamera(); }}>
                 <div className="gov-service-icon">📸</div>
-                <h3 className="gov-service-title">Snap & Report</h3>
+                <h3 className="gov-service-title">{t('citizen.snapReport')}</h3>
                 <p className="gov-service-description">
-                  Capture issues instantly with AI-powered image analysis
+                  {t('citizen.snapReportDesc')}
                 </p>
                 <button className="gov-btn gov-btn-accent gov-btn-lg">
-                  Take Photo & Report
+                  {t('citizen.takePhotoReport')}
                 </button>
               </div>
 
               <div className="gov-service-card" onClick={() => navigateToView('track')}>
                 <div className="gov-service-icon">🔍</div>
-                <h3 className="gov-service-title">Track Status</h3>
+                <h3 className="gov-service-title">{t('citizen.trackStatus')}</h3>
                 <p className="gov-service-description">
-                  Monitor your complaint status with real-time updates
+                  {t('citizen.trackStatusDesc')}
                 </p>
                 <button className="gov-btn gov-btn-secondary gov-btn-lg">
-                  Track Complaint
+                  {t('citizen.trackComplaint')}
                 </button>
               </div>
 
               <div className="gov-service-card" onClick={() => navigateToView('leaderboard')}>
                 <div className="gov-service-icon">🏆</div>
-                <h3 className="gov-service-title">Citizen Leaderboard</h3>
+                <h3 className="gov-service-title">{t('citizen.leaderboard')}</h3>
                 <p className="gov-service-description">
-                  View rankings and earn points for civic participation
+                  {t('citizen.leaderboardDesc')}
                 </p>
                 <button className="gov-btn gov-btn-success gov-btn-lg">
-                  View Rankings
+                  {t('citizen.viewRankings')}
                 </button>
               </div>
             </div>
@@ -573,15 +577,15 @@ export default function CitizenPortal() {
                   <div className="gov-service-icon" style={{ background: 'linear-gradient(135deg, #8B5CF6, #6366F1)' }}>
                     🤝
                   </div>
-                  <h3 className="gov-service-title" style={{ color: '#8B5CF6' }}>Volunteer Dashboard</h3>
+                  <h3 className="gov-service-title" style={{ color: '#8B5CF6' }}>{t('citizen.volunteerDashboard')}</h3>
                   <p className="gov-service-description">
-                    Help your community by responding to nearby civic issues
+                    {t('citizen.volunteerDashDesc')}
                   </p>
                   <button className="gov-btn gov-btn-lg" style={{ 
                     background: 'linear-gradient(135deg, #8B5CF6, #6366F1)',
                     color: 'white'
                   }}>
-                    View Tasks
+                    {t('citizen.viewTasks')}
                   </button>
                   {volunteerProfile.is_available && (
                     <div style={{
@@ -595,7 +599,7 @@ export default function CitizenPortal() {
                       fontSize: '0.75rem',
                       fontWeight: '700'
                     }}>
-                      ✅ Available
+                      {t('citizen.availableBadge')}
                     </div>
                   )}
                 </div>
@@ -660,15 +664,15 @@ export default function CitizenPortal() {
                   <div className="gov-service-icon" style={{ background: 'linear-gradient(135deg, #8B5CF6, #6366F1)' }}>
                     🤝
                   </div>
-                  <h3 className="gov-service-title" style={{ color: '#8B5CF6' }}>Become a Volunteer</h3>
+                  <h3 className="gov-service-title" style={{ color: '#8B5CF6' }}>{t('citizen.becomeVolunteer')}</h3>
                   <p className="gov-service-description">
-                    Help your community by responding to nearby civic issues
+                    {t('citizen.volunteerDashDesc')}
                   </p>
                   <button className="gov-btn gov-btn-lg" style={{ 
                     background: 'linear-gradient(135deg, #8B5CF6, #6366F1)',
                     color: 'white'
                   }}>
-                    Enable Volunteer Mode
+                    {t('citizen.enableVolunteerMode')}
                   </button>
                 </div>
               )}
@@ -678,19 +682,19 @@ export default function CitizenPortal() {
             <div className="gov-stats-grid">
               <div className="gov-stat-card">
                 <h3 className="gov-stat-number">{complaints.length}</h3>
-                <p className="gov-stat-label">Total Complaints</p>
+                <p className="gov-stat-label">{t('citizen.totalComplaints')}</p>
               </div>
               <div className="gov-stat-card">
                 <h3 className="gov-stat-number">{complaints.filter(c => c.status === 'Resolved').length}</h3>
-                <p className="gov-stat-label">Resolved Issues</p>
+                <p className="gov-stat-label">{t('citizen.resolvedIssues')}</p>
               </div>
               <div className="gov-stat-card">
                 <h3 className="gov-stat-number">{Math.round((complaints.filter(c => c.status === 'Resolved').length / complaints.length) * 100)}%</h3>
-                <p className="gov-stat-label">Resolution Rate</p>
+                <p className="gov-stat-label">{t('citizen.resolutionRate')}</p>
               </div>
               <div className="gov-stat-card">
                 <h3 className="gov-stat-number">24h</h3>
-                <p className="gov-stat-label">Avg Response Time</p>
+                <p className="gov-stat-label">{t('citizen.avgResponseTime')}</p>
               </div>
             </div>
 
@@ -699,7 +703,7 @@ export default function CitizenPortal() {
               <div className="gov-card-header">
                 <h3 className="gov-card-title">
                   <div className="gov-card-icon">📋</div>
-                  Recent Activity
+                  {t('citizen.recentActivity')}
                 </h3>
               </div>
               <div className="gov-card-body">
@@ -768,8 +772,8 @@ export default function CitizenPortal() {
 
         {view === 'leaderboard' && (
           <div style={{ animation: 'fadeUp .4s ease' }}>
-            <button onClick={() => navigateToView('home')} className="gov-btn gov-btn-secondary" style={{ marginBottom: '1rem' }}>
-              ← Back to Home
+              <button onClick={() => navigateToView('home')} className="gov-btn gov-btn-secondary" style={{ marginBottom: '1rem' }}>
+              {t('nav.backToHome')}
             </button>
             <LazyLeaderboard />
           </div>
@@ -781,16 +785,16 @@ export default function CitizenPortal() {
               <div className="gov-card-header">
                 <h3 className="gov-card-title">
                   <div className="gov-card-icon">🔍</div>
-                  Track Your Complaint
+                  {t('citizen.trackYourComplaint')}
                 </h3>
               </div>
               <div className="gov-card-body">
                 <button onClick={() => { navigateToView('home'); setTracked(null); setTrackId(''); }} className="gov-btn gov-btn-secondary" style={{ marginBottom: '1.5rem' }}>
-                  ← Back to Home
+                  {t('nav.backToHome')}
                 </button>
                 
                 <div className="gov-form-group">
-                  <label className="gov-label">Ticket ID</label>
+                  <label className="gov-label">{t('citizen.ticketId')}</label>
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <input 
                       className="gov-input" 
@@ -800,7 +804,7 @@ export default function CitizenPortal() {
                       style={{ flex: 1 }}
                     />
                     <button className="gov-btn gov-btn-primary" onClick={doTrack}>
-                      Track Status
+                      {t('citizen.trackStatusBtn')}
                     </button>
                   </div>
                 </div>
@@ -821,21 +825,21 @@ export default function CitizenPortal() {
               <div className="gov-card-header">
                 <h3 className="gov-card-title">
                   <div className="gov-card-icon">📝</div>
-                  File New Complaint
+                  {t('citizen.fileNewComplaintTitle')}
                 </h3>
               </div>
               <div className="gov-card-body">
                 <button onClick={() => navigateToView('home')} className="gov-btn gov-btn-secondary" style={{ marginBottom: '1.5rem' }}>
-                  ← Back to Home
+                  {t('nav.backToHome')}
                 </button>
                 
                 {/* Government Progress Steps */}
                 <div className="gov-steps" style={{ marginBottom: '2rem' }}>
                   {[
-                    { num: '1', label: 'Your Information', icon: '👤' },
-                    { num: '2', label: 'Complaint Details', icon: '📝' },
-                    { num: '3', label: 'AI Review', icon: '🤖' },
-                    { num: '4', label: 'Submit', icon: '✅' }
+                    { num: '1', label: t('citizen.yourInformation'), icon: '👤' },
+                    { num: '2', label: t('citizen.describeComplaint'), icon: '📝' },
+                    { num: '3', label: t('citizen.aiReview'), icon: '🤖' },
+                    { num: '4', label: t('citizen.submitStep'), icon: '✅' }
                   ].map((s, i) => (
                     <div key={s.num} className={`gov-step ${step === i + 1 ? 'active' : ''} ${step > i + 1 ? 'completed' : ''}`}>
                       <div className="gov-step-circle">
@@ -849,24 +853,24 @@ export default function CitizenPortal() {
                 {step === 1 && (
                   <div>
                     <h4 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--gov-dark)', marginBottom: '1.5rem' }}>
-                      Personal Information
+                      {t('citizen.yourInformation')}
                     </h4>
                     
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
                       <div className="gov-form-group">
-                        <label className="gov-label">Full Name *</label>
+                        <label className="gov-label">{t('citizen.fullName')} *</label>
                         <input 
                           className="gov-input" 
-                          placeholder="e.g. Priya Sharma" 
+                          placeholder={t('citizen.namePlaceholder')}
                           value={form.name} 
                           onChange={e => f('name', e.target.value)} 
                         />
                       </div>
                       <div className="gov-form-group">
-                        <label className="gov-label">Phone Number *</label>
+                        <label className="gov-label">{t('citizen.phoneNumber')} *</label>
                         <input 
                           className="gov-input" 
-                          placeholder="10-digit mobile number" 
+                          placeholder={t('citizen.phonePlaceholder')}
                           value={form.phone} 
                           onChange={e => f('phone', e.target.value)} 
                         />
@@ -875,19 +879,19 @@ export default function CitizenPortal() {
                     
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
                       <div className="gov-form-group">
-                        <label className="gov-label">Location *</label>
+                        <label className="gov-label">{t('citizen.location')} *</label>
                         <input 
                           className="gov-input" 
-                          placeholder="Street, Area, City" 
+                          placeholder={t('citizen.locationPlaceholder')}
                           value={form.location} 
                           onChange={e => f('location', e.target.value)} 
                         />
                       </div>
                       <div className="gov-form-group">
-                        <label className="gov-label">Ward/Pincode</label>
+                        <label className="gov-label">{t('citizen.wardPincode')}</label>
                         <input 
                           className="gov-input" 
-                          placeholder="e.g. Ward 42 or 110001" 
+                          placeholder={t('citizen.wardPlaceholder')}
                           value={form.ward} 
                           onChange={e => f('ward', e.target.value)} 
                         />
@@ -905,7 +909,7 @@ export default function CitizenPortal() {
                       }}
                       style={{ width: '100%' }}
                     >
-                      Next: Complaint Details →
+                      {t('citizen.nextComplaintDetails')}
                     </button>
                   </div>
                 )}
@@ -913,22 +917,22 @@ export default function CitizenPortal() {
                 {step === 2 && (
                   <div>
                     <h4 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--gov-dark)', marginBottom: '1.5rem' }}>
-                      Complaint Details & Evidence
+                      {t('citizen.describeComplaint')}
                     </h4>
                     
                     {/* Photo Upload Section */}
                     <div className="gov-photo-upload" style={{ marginBottom: '2rem' }}>
                       <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--gov-text-light)', marginBottom: '1rem', textAlign: 'center' }}>
-                        📸 Visual Evidence (Optional but Recommended)
+                        {t('citizen.visualEvidence')}
                       </div>
                       
                       {!form.photo && !photoMode && (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                           <button className="gov-btn gov-btn-primary" onClick={startCamera}>
-                            📷 Take Photo
+                            {t('citizen.takePhoto')}
                           </button>
                           <button className="gov-btn gov-btn-secondary" onClick={() => fileInputRef.current?.click()}>
-                            📁 Upload Photo
+                            {t('citizen.uploadPhoto')}
                           </button>
                         </div>
                       )}
@@ -943,10 +947,10 @@ export default function CitizenPortal() {
                           />
                           <div style={{ textAlign: 'center', marginTop: '1rem' }}>
                             <button className="gov-btn gov-btn-success" onClick={capturePhoto} style={{ marginRight: '1rem' }}>
-                              📸 Capture
+                              {t('citizen.capture')}
                             </button>
                             <button className="gov-btn gov-btn-secondary" onClick={stopCamera}>
-                              ✕ Cancel
+                              {t('citizen.cancelCamera')}
                             </button>
                           </div>
                           <canvas ref={canvasRef} style={{ display: 'none' }} />
@@ -962,7 +966,7 @@ export default function CitizenPortal() {
                           />
                           <div style={{ marginTop: '0.5rem' }}>
                             <button onClick={() => f('photo', null)} className="gov-btn gov-btn-secondary">
-                              Remove Photo
+                              {t('citizen.removePhoto')}
                             </button>
                           </div>
                         </div>
@@ -978,20 +982,20 @@ export default function CitizenPortal() {
                     </div>
 
                     <div className="gov-form-group" style={{ marginBottom: '1.5rem' }}>
-                      <label className="gov-label">Complaint Title *</label>
+                      <label className="gov-label">{t('citizen.complaintTitle')} *</label>
                       <input 
                         className="gov-input" 
-                        placeholder="Short, clear title describing the issue" 
+                        placeholder={t('citizen.titlePlaceholder')}
                         value={form.title} 
                         onChange={e => f('title', e.target.value)} 
                       />
                     </div>
 
                     <div className="gov-form-group" style={{ marginBottom: '2rem' }}>
-                      <label className="gov-label">Detailed Description *</label>
+                      <label className="gov-label">{t('citizen.detailedDescription')} *</label>
                       <textarea 
                         className="gov-input gov-textarea" 
-                        placeholder="Describe the problem in detail..." 
+                        placeholder={t('citizen.descriptionPlaceholder')}
                         value={form.description} 
                         onChange={e => f('description', e.target.value)} 
                         style={{ minHeight: '150px' }}
@@ -1000,7 +1004,7 @@ export default function CitizenPortal() {
 
                     <div style={{ display: 'flex', gap: '1rem' }}>
                       <button className="gov-btn gov-btn-secondary" onClick={() => setStep(1)}>
-                        ← Back
+                        {t('nav.back')}
                       </button>
                       <button 
                         className="gov-btn gov-btn-primary gov-btn-lg" 
@@ -1008,7 +1012,7 @@ export default function CitizenPortal() {
                         disabled={analyzing}
                         style={{ flex: 1 }}
                       >
-                        {analyzing ? 'Analyzing...' : '🤖 Analyze with AI →'}
+                        {analyzing ? t('citizen.loading') : t('citizen.analyzeWithAI')}
                       </button>
                     </div>
                   </div>
@@ -1017,40 +1021,40 @@ export default function CitizenPortal() {
                 {step === 3 && triage && (
                   <div>
                     <h4 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--gov-dark)', marginBottom: '1.5rem' }}>
-                      AI Analysis Results
+                      {t('citizen.aiAnalysisResults')}
                     </h4>
                     
                     <div className="gov-alert gov-alert-success" style={{ marginBottom: '2rem' }}>
                       <div>
-                        <strong>🤖 AI Analysis Complete:</strong> {triage.confidence}% confidence
+                        <strong>{t('citizen.aiAnalysisComplete')}</strong> {triage.confidence}% {t('citizen.confidence')}
                       </div>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
                       <div className="gov-stat-card">
-                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--gov-text-light)' }}>Category</div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--gov-text-light)' }}>{t('citizen.category')}</div>
                         <div style={{ fontSize: '1.125rem', fontWeight: '700' }}>{triage.category}</div>
                       </div>
                       <div className="gov-stat-card">
-                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--gov-text-light)' }}>Department</div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--gov-text-light)' }}>{t('citizen.department')}</div>
                         <div style={{ fontSize: '1.125rem', fontWeight: '700' }}>{triage.department?.name}</div>
                       </div>
                       <div className="gov-stat-card">
-                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--gov-text-light)' }}>Priority</div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--gov-text-light)' }}>{t('citizen.priority')}</div>
                         <div style={{ fontSize: '1.125rem', fontWeight: '700' }}>{triage.priority}</div>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: '1rem' }}>
                       <button className="gov-btn gov-btn-secondary" onClick={() => setStep(2)}>
-                        ← Edit Details
+                        {t('citizen.editDetails')}
                       </button>
                       <button 
                         className="gov-btn gov-btn-primary gov-btn-lg" 
                         onClick={() => setStep(4)} 
                         style={{ flex: 1 }}
                       >
-                        Proceed to Submit →
+                        {t('citizen.proceedToSubmit')}
                       </button>
                     </div>
                   </div>
@@ -1059,7 +1063,7 @@ export default function CitizenPortal() {
                 {step === 4 && (
                   <div>
                     <h4 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--gov-dark)', marginBottom: '1.5rem' }}>
-                      Review & Submit
+                      {t('citizen.reviewAndSubmit')}
                     </h4>
 
                     <div className="gov-card" style={{ marginBottom: '2rem' }}>
@@ -1070,24 +1074,24 @@ export default function CitizenPortal() {
                         <p style={{ marginBottom: '1rem' }}>{form.description}</p>
                         
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', fontSize: '0.875rem' }}>
-                          <div><strong>Name:</strong> {form.name}</div>
-                          <div><strong>Location:</strong> {form.location}</div>
-                          <div><strong>Category:</strong> {triage?.category}</div>
-                          <div><strong>Priority:</strong> {triage?.priority}</div>
+                          <div><strong>{t('citizen.nameLabel')}</strong> {form.name}</div>
+                          <div><strong>{t('citizen.locationLabel')}</strong> {form.location}</div>
+                          <div><strong>{t('citizen.categoryLabel')}</strong> {triage?.category}</div>
+                          <div><strong>{t('citizen.priorityLabel')}</strong> {triage?.priority}</div>
                         </div>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: '1rem' }}>
                       <button className="gov-btn gov-btn-secondary" onClick={() => setStep(3)}>
-                        ← Back
+                        {t('nav.back')}
                       </button>
                       <button 
                         className="gov-btn gov-btn-success gov-btn-lg" 
                         onClick={doSubmit} 
                         style={{ flex: 1 }}
                       >
-                        ✅ Submit to Government
+                        {t('citizen.submitComplaint')}
                       </button>
                     </div>
                   </div>
@@ -1103,7 +1107,7 @@ export default function CitizenPortal() {
               <div className="gov-card-body" style={{ padding: '3rem 2rem' }}>
                 <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>✅</div>
                 <h2 style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--gov-dark)', marginBottom: '1rem' }}>
-                  Complaint Successfully Filed!
+                  {t('citizen.complaintSuccessTitle')}
                 </h2>
                 
                 <div style={{ 
@@ -1117,20 +1121,20 @@ export default function CitizenPortal() {
                   marginBottom: '1.5rem',
                   letterSpacing: '2px'
                 }}>
-                  Ticket ID: {ticket.ticket_id || ticket.ticketId || 'Processing...'}
+                  {t('citizen.ticketIdLabel')} {ticket.ticket_id || ticket.ticketId || 'Processing...'}
                 </div>
                 
                 <div className="gov-alert gov-alert-success" style={{ textAlign: 'left', marginBottom: '2rem' }}>
                   <div>
                     <div style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '0.5rem' }}>
-                      🏛️ Your complaint has been officially registered with the Government of India
+                      {t('citizen.govRegistered')}
                     </div>
                     <div style={{ fontSize: '0.875rem', lineHeight: 1.6 }}>
-                      • Routed to: <strong>{ticket.departments?.name || DEPARTMENTS.find(d => d.id === ticket.dept || d.id === ticket.department_id)?.name || 'Department'}</strong><br/>
-                      • Expected Resolution: <strong>{ticket.sla_hours || ticket.slaHours || 72} hours</strong><br/>
-                      • Priority: <strong style={{ textTransform: 'capitalize' }}>{ticket.priority || 'Medium'}</strong><br/>
-                      • SMS updates will be sent to your registered mobile number<br/>
-                      • You can track progress anytime using your ticket ID
+                      • {t('citizen.routedTo')} <strong>{ticket.departments?.name || DEPARTMENTS.find(d => d.id === ticket.dept || d.id === ticket.department_id)?.name || 'Department'}</strong><br/>
+                      • {t('citizen.expectedResolution')} <strong>{ticket.sla_hours || ticket.slaHours || 72} {t('citizen.hours')}</strong><br/>
+                      • {t('citizen.priority')}: <strong style={{ textTransform: 'capitalize' }}>{ticket.priority || 'Medium'}</strong><br/>
+                      • {t('citizen.smsUpdates')}<br/>
+                      • {t('citizen.trackAnytime')}
                     </div>
                   </div>
                 </div>
@@ -1145,7 +1149,7 @@ export default function CitizenPortal() {
                     }}
                     style={{ width: '100%' }}
                   >
-                    🔍 Track My Complaint Status
+                    {t('citizen.trackMyComplaintStatus')}
                   </button>
                   <button 
                     className="gov-btn gov-btn-secondary gov-btn-lg" 
@@ -1158,7 +1162,7 @@ export default function CitizenPortal() {
                     }}
                     style={{ width: '100%' }}
                   >
-                    File Another Complaint
+                    {t('citizen.fileAnotherComplaint')}
                   </button>
                 </div>
               </div>

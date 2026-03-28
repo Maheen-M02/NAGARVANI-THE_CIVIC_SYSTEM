@@ -111,7 +111,7 @@ export function TopNav({ title, sub, role }) {
           onClick={handleSignOut}
           style={{ background: 'none', border: '1.5px solid #dc2626', borderRadius: 8, padding: isMobile ? '4px 8px' : '5px 12px', fontSize: isMobile ? 11 : 12, fontWeight: 600, cursor: 'pointer', color: '#dc2626', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}
         >
-          🚪{!isMobile && ' Sign Out'}
+          🚪{!isMobile && ` ${t('nav.signOut')}`}
         </button>
       </div>
     </nav>

@@ -16,7 +16,7 @@ const languages = [
   { code: 'ml', name: 'Malayalam', nativeName: 'മലയാളം' }
 ];
 
-export default function LanguageSelector() {
+export default function LanguageSelector({ variant }) {
   const { i18n, t } = useTranslation();
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -27,17 +27,19 @@ export default function LanguageSelector() {
     setShowDropdown(false);
   };
 
+  const isDark = variant === 'dark';
+
   return (
     <div style={{ position: 'relative' }}>
       <button
         onClick={() => setShowDropdown(!showDropdown)}
         style={{
-          background: 'none',
-          border: '1.5px solid #E2E8F0',
+          background: isDark ? 'rgba(255,255,255,0.1)' : 'none',
+          border: isDark ? '1.5px solid rgba(255,255,255,0.3)' : '1.5px solid #E2E8F0',
           borderRadius: 8,
           padding: '8px 12px',
           cursor: 'pointer',
-          color: '#64748B',
+          color: isDark ? '#fff' : '#64748B',
           fontSize: 12,
           fontWeight: 600,
           display: 'flex',
@@ -79,7 +81,7 @@ export default function LanguageSelector() {
               color: '#1E2845', 
               margin: 0 
             }}>
-              {t('language')}
+              {t('common.language')}
             </h3>
           </div>
 

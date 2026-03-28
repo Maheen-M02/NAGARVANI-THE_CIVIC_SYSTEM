@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { StatusBadge } from './UI';
 import { DEPARTMENTS } from '../data/constants';
 import locationService from '../services/locationService';
@@ -22,15 +23,15 @@ function statusLabel(s) {
 }
 
 // ── Home Screen ───────────────────────────────────────────────
-function HomeScreen({ user, complaints, onNavigate, signOut }) {
+function HomeScreen({ user, complaints, onNavigate, signOut, t }) {
   const total = complaints.length;
   const resolved = complaints.filter(c => ['Resolved','resolved','closed'].includes(c.status)).length;
   const open = complaints.filter(c => ['Open','pending','acknowledged'].includes(c.status)).length;
 
   const actions = [
-    { icon:'📝', label:'File Complaint', sub:'Report an issue', color:'#eff6ff', iconBg:'#1e3a8a', view:'file' },
-    { icon:'📸', label:'Snap & Report', sub:'Take a photo', color:'#f0fdf4', iconBg:'#16a34a', view:'snap' },
-    { icon:'🔍', label:'Track Status', sub:'Check your ticket', color:'#fef3c7', iconBg:'#d97706', view:'track' },
+    { icon:'📝', label:t('citizen.fileComplaint'), sub:t('citizen.fileComplaintDesc'), color:'#eff6ff', iconBg:'#1e3a8a', view:'file' },
+    { icon:'📸', label:t('citizen.snapReport'), sub:t('citizen.snapReportDesc'), color:'#f0fdf4', iconBg:'#16a34a', view:'snap' },
+    { icon:'🔍', label:t('citizen.trackStatus'), sub:t('citizen.trackStatusDesc'), color:'#fef3c7', iconBg:'#d97706', view:'track' },
     { icon:'📞', label:'Call & Report', sub:'Voice complaint', color:'#fdf4ff', iconBg:'#7c3aed', view:'voice' },
   ];
 
@@ -43,7 +44,7 @@ function HomeScreen({ user, complaints, onNavigate, signOut }) {
           {user?.name || 'Citizen'} 👋
         </div>
         <div style={{ display:'flex', gap:10 }}>
-          {[['🎫', total, 'Total'], ['📂', open, 'Open'], ['✅', resolved, 'Resolved']].map(([ic,v,l]) => (
+          {[['🎫', total, t('citizen.totalComplaints')], ['📂', open, t('admin.open')], ['✅', resolved, t('admin.resolved')]].map(([ic,v,l]) => (
             <div key={l} style={{ flex:1, background:'rgba(255,255,255,0.12)', borderRadius:14, padding:'10px 8px', textAlign:'center', backdropFilter:'blur(10px)' }}>
               <div style={{ fontFamily:'Syne,sans-serif', fontSize:20, fontWeight:800, color:'#00C2E0' }}>{ic} {v}</div>
               <div style={{ fontSize:10, color:'rgba(255,255,255,0.65)', fontWeight:600, marginTop:2 }}>{l}</div>
@@ -54,7 +55,7 @@ function HomeScreen({ user, complaints, onNavigate, signOut }) {
 
       {/* Quick Actions */}
       <div style={{ padding:'0 12px', marginBottom:20 }}>
-        <div style={{ fontFamily:'Syne,sans-serif', fontSize:15, fontWeight:700, color:'#1e2845', marginBottom:12 }}>Quick Actions</div>
+        <div style={{ fontFamily:'Syne,sans-serif', fontSize:15, fontWeight:700, color:'#1e2845', marginBottom:12 }}>{t('citizen.fileComplaint')}</div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
           {actions.map(a => (
             <button key={a.view} onClick={() => onNavigate(a.view)}
@@ -70,7 +71,7 @@ function HomeScreen({ user, complaints, onNavigate, signOut }) {
       {/* Recent Activity */}
       <div style={{ padding:'0 12px', marginBottom:12 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-          <div style={{ fontFamily:'Syne,sans-serif', fontSize:15, fontWeight:700, color:'#1e2845' }}>Recent Activity</div>
+          <div style={{ fontFamily:'Syne,sans-serif', fontSize:15, fontWeight:700, color:'#1e2845' }}>{t('citizen.recentActivity')}</div>
           <button onClick={() => onNavigate('track')} style={{ fontSize:12, fontWeight:600, color:'#0ea5e9', background:'none', border:'none', cursor:'pointer' }}>See all</button>
         </div>
         {complaints.length === 0 ? (
@@ -448,7 +449,8 @@ function TrackScreen({ onBack, complaints, supabaseService, user, notify, initia
 export default function MobileCitizenApp() {
   const { user, complaints, signOut, supabaseService, submitComplaint, notify, departments } = useApp();
   const navigate = useNavigate();
-  const [screen, setScreen] = useState('home'); // home | file | track | success
+  const { t } = useTranslation();
+  const [screen, setScreen] = useState('home');
   const [ticket, setTicket] = useState(null);
   const [initialTicketId, setInitialTicketId] = useState('');
 
@@ -465,10 +467,10 @@ export default function MobileCitizenApp() {
   };
 
   const tabs = [
-    { id:'home',  icon:'🏠', label:'Home' },
-    { id:'file',  icon:'📝', label:'File' },
-    { id:'track', icon:'🔍', label:'Track' },
-    { id:'leaderboard', icon:'🏆', label:'Ranks' },
+    { id:'home',  icon:'🏠', label:t('bottomNav.home') },
+    { id:'file',  icon:'📝', label:t('bottomNav.file') },
+    { id:'track', icon:'🔍', label:t('bottomNav.track') },
+    { id:'leaderboard', icon:'🏆', label:t('bottomNav.ranks') },
   ];
 
   return (
@@ -482,14 +484,14 @@ export default function MobileCitizenApp() {
           <div style={{ fontSize:12, color:'rgba(255,255,255,0.6)' }}>{user?.name?.split(' ')[0]}</div>
           <button onClick={async () => { await signOut(); navigate('/'); }}
             style={{ background:'rgba(220,38,38,0.2)', border:'1px solid rgba(220,38,38,0.4)', borderRadius:8, padding:'5px 10px', fontSize:11, fontWeight:700, color:'#fca5a5', cursor:'pointer' }}>
-            Sign Out
+            {t('nav.signOut')}
           </button>
         </div>
       </div>
 
       {/* Page content */}
       <div style={{ paddingTop:56 }}>
-        {screen === 'home' && <HomeScreen user={user} complaints={complaints} onNavigate={goTo} signOut={signOut} />}
+        {screen === 'home' && <HomeScreen user={user} complaints={complaints} onNavigate={goTo} signOut={signOut} t={t} />}
         {screen === 'file' && <FileScreen user={user} onBack={() => setScreen('home')} onSuccess={handleSuccess} notify={notify} submitComplaint={submitComplaint} departments={departments} />}
         {screen === 'snap' && <FileScreen user={user} onBack={() => setScreen('home')} onSuccess={handleSuccess} notify={notify} submitComplaint={submitComplaint} departments={departments} />}
         {screen === 'track' && <TrackScreen onBack={() => setScreen('home')} complaints={complaints} supabaseService={supabaseService} user={user} notify={notify} initialTicketId={initialTicketId} />}

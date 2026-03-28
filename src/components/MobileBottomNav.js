@@ -1,11 +1,13 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 
 export default function MobileBottomNav() {
   const { user, role } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   if (!user) return null;
 
@@ -14,10 +16,10 @@ export default function MobileBottomNav() {
   // Citizen nav
   if (role === 'citizen') {
     const items = [
-      { icon: '🏠', label: 'Home',      to: '/citizen' },
-      { icon: '📝', label: 'File',      to: '/citizen/file' },
-      { icon: '🔍', label: 'Track',     to: '/citizen/track' },
-      { icon: '🏆', label: 'Ranks',     to: '/leaderboard' },
+      { icon: '🏠', label: t('bottomNav.home'),      to: '/citizen' },
+      { icon: '📝', label: t('bottomNav.file'),      to: '/citizen/file' },
+      { icon: '🔍', label: t('bottomNav.track'),     to: '/citizen/track' },
+      { icon: '🏆', label: t('bottomNav.ranks'),     to: '/leaderboard' },
     ];
     return <BottomNav items={items} path={path} navigate={navigate} />;
   }
@@ -25,9 +27,9 @@ export default function MobileBottomNav() {
   // Officer nav
   if (role === 'officer') {
     const items = [
-      { icon: '📋', label: 'Queue',     to: '/officer' },
-      { icon: '🗺️', label: 'Map',       to: '/officer' },
-      { icon: '🏆', label: 'Ranks',     to: '/leaderboard' },
+      { icon: '📋', label: t('bottomNav.queue'),     to: '/officer' },
+      { icon: '🗺️', label: t('bottomNav.map'),       to: '/officer' },
+      { icon: '🏆', label: t('bottomNav.ranks'),     to: '/leaderboard' },
     ];
     return <BottomNav items={items} path={path} navigate={navigate} />;
   }
@@ -35,8 +37,8 @@ export default function MobileBottomNav() {
   // Admin nav
   if (role === 'admin') {
     const items = [
-      { icon: '📊', label: 'Dashboard', to: '/admin' },
-      { icon: '🏆', label: 'Ranks',     to: '/leaderboard' },
+      { icon: '📊', label: t('bottomNav.dashboard'), to: '/admin' },
+      { icon: '🏆', label: t('bottomNav.ranks'),     to: '/leaderboard' },
     ];
     return <BottomNav items={items} path={path} navigate={navigate} />;
   }

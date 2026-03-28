@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import GridDistortion from '../components/GridDistortion';
 import NagarVaniLogo from '../components/NagarVaniLogo';
 import AuthModal from '../components/AuthModal';
+import LanguageSelector from '../components/LanguageSelector';
 
 // ── Mobile Landing ────────────────────────────────────────────
-function MobileLanding({ user, complaints, handleRoleSelect, handleAuthClick, handleSignOut }) {
+function MobileLanding({ user, complaints, handleRoleSelect, handleAuthClick, handleSignOut, t }) {
   const total = complaints.length;
   const res = complaints.filter(c => c.status === 'resolved').length;
 
   const roles = [
-    { id:'citizen', icon:'🧑‍💼', title:'Citizen Portal', tag:'File & Track Complaints', color:'#0A7EA4',
-      desc:'Submit a grievance in 60 seconds. AI routes it to the right department instantly.' },
-    { id:'officer', icon:'👮', title:'Officer Dashboard', tag:'Manage & Resolve', color:'#8B5CF6',
-      desc:'AI-prioritized task queue. Update status from the field. Hit your SLA targets.' },
-    { id:'admin', icon:'📊', title:'Command Center', tag:'Govern at Scale', color:'#F5A623',
-      desc:'Live analytics across every department. Spot trends. Prevent SLA breaches.' },
+    { id:'citizen', icon:'🧑‍💼', title:t('landing.citizenTitle'), tag:t('landing.citizenTag'), color:'#0A7EA4',
+      desc:t('landing.citizenDesc') },
+    { id:'officer', icon:'👮', title:t('landing.officerTitle'), tag:t('landing.officerTag'), color:'#8B5CF6',
+      desc:t('landing.officerDesc') },
+    { id:'admin', icon:'📊', title:t('landing.adminTitle'), tag:t('landing.adminTag'), color:'#F5A623',
+      desc:t('landing.adminDesc') },
   ];
 
   return (
@@ -31,9 +33,12 @@ function MobileLanding({ user, complaints, handleRoleSelect, handleAuthClick, ha
             Nagar<span style={{ color:'#00C2E0' }}>Vani</span>
           </span>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:6, background:'#22C55E20', padding:'5px 12px', borderRadius:999, border:'1px solid #22C55E40' }}>
-          <span style={{ width:6, height:6, background:'#22C55E', borderRadius:'50%', display:'inline-block' }} />
-          <span style={{ fontSize:11, fontWeight:700, color:'#22C55E' }}>LIVE</span>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <LanguageSelector variant="dark" />
+          <div style={{ display:'flex', alignItems:'center', gap:6, background:'#22C55E20', padding:'5px 12px', borderRadius:999, border:'1px solid #22C55E40' }}>
+            <span style={{ width:6, height:6, background:'#22C55E', borderRadius:'50%', display:'inline-block' }} />
+            <span style={{ fontSize:11, fontWeight:700, color:'#22C55E' }}>{t('landing.live')}</span>
+          </div>
         </div>
       </div>
 
@@ -43,16 +48,16 @@ function MobileLanding({ user, complaints, handleRoleSelect, handleAuthClick, ha
           <span style={{ fontSize:11, fontWeight:700, color:'#00C2E0' }}>🇮🇳 AI-Powered Civic Platform</span>
         </div>
         <h1 style={{ fontFamily:'Syne,sans-serif', fontSize:28, fontWeight:800, color:'#fff', lineHeight:1.2, marginBottom:12, letterSpacing:'-0.5px' }}>
-          Every Complaint<br />
+          {t('landing.everyComplaint')}<br />
           <span style={{ background:'linear-gradient(90deg,#00C2E0,#0A7EA4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
-            Heard &amp; Resolved
+            {t('landing.heardResolved')}
           </span>
         </h1>
         <p style={{ fontSize:14, color:'#8899BB', lineHeight:1.6, marginBottom:20, maxWidth:300, margin:'0 auto 20px' }}>
-          Complaint to resolution in under 48 hours. Powered by AI + Blockchain.
+          {t('landing.aiDescription')}
         </p>
         <div style={{ display:'flex', justifyContent:'center', gap:20 }}>
-          {[['🎫', total, 'Complaints'], ['✅', res, 'Resolved'], ['📈', total > 0 ? Math.round(res/total*100)+'%' : '0%', 'Rate']].map(([ic,v,l]) => (
+          {[['🎫', total, t('landing.complaints')], ['✅', res, t('landing.resolved')], ['📈', total > 0 ? Math.round(res/total*100)+'%' : '0%', t('landing.rate')]].map(([ic,v,l]) => (
             <div key={l} style={{ textAlign:'center' }}>
               <div style={{ fontFamily:'Syne,sans-serif', fontSize:16, fontWeight:800, color:'#00C2E0' }}>{ic} {v}</div>
               <div style={{ fontSize:10, color:'#8899BB', fontWeight:600 }}>{l}</div>
@@ -63,7 +68,7 @@ function MobileLanding({ user, complaints, handleRoleSelect, handleAuthClick, ha
 
       {/* Role cards */}
       <div style={{ position:'relative', zIndex:10, flex:'1 1 auto', padding:'0 0 16px' }}>
-        <div style={{ fontSize:12, fontWeight:700, color:'#F5A623', textAlign:'center', marginBottom:14 }}>👇 Select your role</div>
+        <div style={{ fontSize:12, fontWeight:700, color:'#F5A623', textAlign:'center', marginBottom:14 }}>{t('landing.selectRole')}</div>
         <div style={{ display:'flex', gap:14, overflowX:'auto', padding:'4px 20px 8px', scrollSnapType:'x mandatory', scrollbarWidth:'none', WebkitOverflowScrolling:'touch' }}>
           {roles.map(r => (
             <div key={r.id} onClick={() => handleRoleSelect(r.id)}
@@ -73,7 +78,7 @@ function MobileLanding({ user, complaints, handleRoleSelect, handleAuthClick, ha
               <div style={{ fontSize:12, color:r.color, fontWeight:700, marginBottom:10, letterSpacing:'0.5px' }}>{r.tag}</div>
               <div style={{ fontSize:13, color:'#8899BB', lineHeight:1.6, marginBottom:20 }}>{r.desc}</div>
               <div style={{ background:r.color, color: r.id==='admin' ? '#0D1B40' : '#fff', padding:'13px 18px', borderRadius:14, fontWeight:700, fontSize:15, fontFamily:'Syne,sans-serif', textAlign:'center' }}>
-                Enter as {r.id.charAt(0).toUpperCase()+r.id.slice(1)} →
+                {t(`landing.${r.id}Cta`)}
               </div>
             </div>
           ))}
@@ -84,26 +89,26 @@ function MobileLanding({ user, complaints, handleRoleSelect, handleAuthClick, ha
       <div style={{ position:'relative', zIndex:10, padding:'0 20px 36px' }}>
         {user ? (
           <div style={{ textAlign:'center' }}>
-            <div style={{ fontSize:13, color:'#8899BB', marginBottom:12 }}>Welcome back, {user.name || user.email}</div>
+            <div style={{ fontSize:13, color:'#8899BB', marginBottom:12 }}>{t('nav.welcome')}, {user.name || user.email}</div>
             <button onClick={handleSignOut}
               style={{ width:'100%', padding:14, borderRadius:14, background:'rgba(220,38,38,0.15)', border:'1px solid rgba(220,38,38,0.3)', color:'#fca5a5', fontWeight:700, fontSize:14, cursor:'pointer' }}>
-              Sign Out
+              {t('nav.signOut')}
             </button>
           </div>
         ) : (
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
             <button onClick={() => handleAuthClick('signin')}
               style={{ padding:14, borderRadius:14, background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', fontWeight:700, fontSize:15, cursor:'pointer' }}>
-              Sign In
+              {t('nav.signIn')}
             </button>
             <button onClick={() => handleAuthClick('signup')}
               style={{ padding:14, borderRadius:14, background:'linear-gradient(135deg,#0A7EA4,#00C2E0)', border:'none', color:'#fff', fontWeight:700, fontSize:15, cursor:'pointer' }}>
-              Sign Up
+              {t('nav.signUp')}
             </button>
           </div>
         )}
         <div style={{ textAlign:'center', marginTop:16, fontSize:11, color:'#3D4F6E' }}>
-          Built for India's 1.4B citizens • AI + Blockchain • NagarVani 2025
+          {t('landing.builtForIndia')}
         </div>
       </div>
     </div>
@@ -114,6 +119,7 @@ function MobileLanding({ user, complaints, handleRoleSelect, handleAuthClick, ha
 export default function Landing() {
   const { setRole, complaints, user, role, signOut } = useApp();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [hov, setHov] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('signin');
@@ -141,7 +147,7 @@ export default function Landing() {
   if (window.innerWidth <= 768) {
     return (
       <>
-        <MobileLanding user={user} complaints={complaints} handleRoleSelect={handleRoleSelect} handleAuthClick={handleAuthClick} handleSignOut={handleSignOut} />
+        <MobileLanding user={user} complaints={complaints} handleRoleSelect={handleRoleSelect} handleAuthClick={handleAuthClick} handleSignOut={handleSignOut} t={t} />
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} defaultMode={authMode} />
       </>
     );
@@ -149,9 +155,9 @@ export default function Landing() {
 
   // Desktop version
   const roles = [
-    { id:'citizen', icon:'🧑‍💼', title:'Citizen Portal', tag:'File & Track Complaints', desc:'Submit a grievance in 60 seconds. AI instantly routes it to the right department.', features:['File complaint in 60 seconds','AI auto-routes to right dept','Live status tracking','22 languages supported'], color:'#0A7EA4', cta:'Enter as Citizen →' },
-    { id:'officer', icon:'👮', title:'Officer Dashboard', tag:'Manage & Resolve Complaints', desc:'Your task queue, AI-prioritized. Update status from the field. Hit your SLA.', features:['Smart task assignment','Priority queue view','Field update with notes','SLA timer per complaint'], color:'#8B5CF6', cta:'Enter as Officer →' },
-    { id:'admin', icon:'📊', title:'Command Center', tag:'Govern at Scale', desc:'See every complaint across every department in real time. Spot trends. Act fast.', features:['Live analytics dashboard','Real-time map tracking','SLA breach alerts','AI trend prediction'], color:'#F5A623', cta:'Enter as Admin →' },
+    { id:'citizen', icon:'🧑‍💼', title:t('landing.citizenTitle'), tag:t('landing.citizenTag'), desc:t('landing.citizenDesc'), features:[t('landing.citizenFeature1'),t('landing.citizenFeature2'),t('landing.citizenFeature3'),t('landing.citizenFeature4')], color:'#0A7EA4', cta:t('landing.citizenCta') },
+    { id:'officer', icon:'👮', title:t('landing.officerTitle'), tag:t('landing.officerTag'), desc:t('landing.officerDesc'), features:[t('landing.officerFeature1'),t('landing.officerFeature2'),t('landing.officerFeature3'),t('landing.officerFeature4')], color:'#8B5CF6', cta:t('landing.officerCta') },
+    { id:'admin', icon:'📊', title:t('landing.adminTitle'), tag:t('landing.adminTag'), desc:t('landing.adminDesc'), features:[t('landing.adminFeature1'),t('landing.adminFeature2'),t('landing.adminFeature3'),t('landing.adminFeature4')], color:'#F5A623', cta:t('landing.adminCta') },
   ];
 
   return (
@@ -171,41 +177,42 @@ export default function Landing() {
             </div>
           </div>
           <div style={{ display:'flex', gap:20, alignItems:'center' }}>
-            {[['🎫',total,'Complaints'],['✅',res,'Resolved'],['📈',Math.round(res/total*100)+'%','Rate']].map(([ic,v,l]) => (
+            {[['🎫',total,t('landing.complaints')],['✅',res,t('landing.resolved')],['📈',Math.round(res/total*100)+'%',t('landing.rate')]].map(([ic,v,l]) => (
               <div key={l} style={{ textAlign:'center' }}>
                 <div style={{ fontSize:15, fontWeight:800, fontFamily:'Syne,sans-serif', color:'#00C2E0' }}>{ic} {v}</div>
                 <div style={{ fontSize:10, color:'#8899BB' }}>{l}</div>
               </div>
             ))}
             <div style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:999, background:'#22C55E20', color:'#22C55E', fontSize:11, fontWeight:700 }}>
-              <span style={{ width:6, height:6, background:'#22C55E', borderRadius:'50%', display:'inline-block' }} />LIVE
+              <span style={{ width:6, height:6, background:'#22C55E', borderRadius:'50%', display:'inline-block' }} />{t('landing.live')}
             </div>
             {user ? (
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                <div style={{ fontSize:12, color:'#8899BB' }}>Welcome, {user.name}</div>
-                <button onClick={handleSignOut} style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', padding:'6px 12px', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>Sign Out</button>
+                <div style={{ fontSize:12, color:'#8899BB' }}>{t('nav.welcome')}, {user.name}</div>
+                <button onClick={handleSignOut} style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', padding:'6px 12px', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>{t('nav.signOut')}</button>
               </div>
             ) : (
               <div style={{ display:'flex', gap:8 }}>
-                <button onClick={() => handleAuthClick('signin')} style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', padding:'6px 12px', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>Sign In</button>
-                <button onClick={() => handleAuthClick('signup')} style={{ background:'linear-gradient(135deg,#0A7EA4,#00C2E0)', border:'none', color:'#fff', padding:'6px 12px', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>Sign Up</button>
+                <button onClick={() => handleAuthClick('signin')} style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', padding:'6px 12px', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>{t('nav.signIn')}</button>
+                <button onClick={() => handleAuthClick('signup')} style={{ background:'linear-gradient(135deg,#0A7EA4,#00C2E0)', border:'none', color:'#fff', padding:'6px 12px', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>{t('nav.signUp')}</button>
               </div>
             )}
+            <LanguageSelector variant="dark" />
           </div>
         </div>
 
         {/* Hero */}
         <div style={{ textAlign:'center', padding:'36px 0 48px', animation:'fadeUp .5s ease' }}>
           <h1 style={{ fontFamily:'Syne,sans-serif', fontSize:'clamp(32px,5.5vw,64px)', fontWeight:800, color:'#fff', lineHeight:1.1, marginBottom:16, letterSpacing:'-1px' }}>
-            Every Citizen Complaint<br />
+            {t('landing.everyComplaint')}<br />
             <span style={{ background:'linear-gradient(90deg,#00C2E0,#0A7EA4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
-              Heard. Resolved. Accountable.
+              {t('landing.heardResolved')}
             </span>
           </h1>
           <p style={{ fontSize:17, color:'#8899BB', maxWidth:520, margin:'0 auto 14px', lineHeight:1.7 }}>
-            AI-powered grievance management for India's 1.4 billion citizens — complaint to resolution in under 48 hours.
+            {t('landing.aiDescription')}
           </p>
-          <div style={{ fontSize:13, color:'#F5A623', fontWeight:700 }}>👇 Select your role to explore</div>
+          <div style={{ fontSize:13, color:'#F5A623', fontWeight:700 }}>{t('landing.selectRole')}</div>
         </div>
 
         {/* Role cards */}
@@ -230,7 +237,7 @@ export default function Landing() {
         </div>
 
         <div style={{ textAlign:'center', paddingBottom:28, color:'#3D4F6E', fontSize:12 }}>
-          Built for India's 1.4B citizens • AI + Blockchain powered • NagarVani 2025
+          {t('landing.builtForIndia')}
         </div>
       </div>
 
