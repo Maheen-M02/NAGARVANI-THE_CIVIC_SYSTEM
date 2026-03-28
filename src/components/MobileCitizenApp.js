@@ -7,6 +7,7 @@ import { DEPARTMENTS } from '../data/constants';
 import locationService from '../services/locationService';
 import { aiTriage, aiImageClassification } from '../data/aiTriage';
 import VoiceAssistant from './VoiceAssistant';
+import LanguageSelector from './LanguageSelector';
 
 // ── Status colour helper ──────────────────────────────────────
 function statusColor(s) {
@@ -480,7 +481,8 @@ export default function MobileCitizenApp() {
         <div style={{ fontFamily:'Syne,sans-serif', fontWeight:800, fontSize:18, color:'#fff' }}>
           Nagar<span style={{ color:'#00C2E0' }}>Vani</span>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <LanguageSelector variant="dark" />
           <div style={{ fontSize:12, color:'rgba(255,255,255,0.6)' }}>{user?.name?.split(' ')[0]}</div>
           <button onClick={async () => { await signOut(); navigate('/'); }}
             style={{ background:'rgba(220,38,38,0.2)', border:'1px solid rgba(220,38,38,0.4)', borderRadius:8, padding:'5px 10px', fontSize:11, fontWeight:700, color:'#fca5a5', cursor:'pointer' }}>
